@@ -1,70 +1,50 @@
-# Phishing Subject XAI Pipeline
+# phishing_xai
 
-Explainable phishing detection pipeline for short texts, focused on email or message subjects only.
+Explainable phishing detection pipeline for short email subjects.
 
-This project evaluates multiple Hugging Face embedding models, combines them with classical machine learning classifiers, estimates performance with nested cross-validation, caches embeddings persistently, and explains the best-performing combination with word-ablation attribution and SHAP.
+This repository implements an experimental framework that compares multiple text embedding models and multiple classical classifiers for binary phishing detection using subject lines only. It is designed for reproducible experimentation, careful model comparison, and post hoc explanation of the selected model.
 
-## Overview
+The project does not claim to solve phishing detection in the general case. Its scope is narrower and explicit:
 
-The goal of this repository is to build a robust and reproducible experimental pipeline for phishing detection from short text subjects, while keeping the system suitable for academic reporting and later paper writing.
+- input text is the subject line only
+- the downstream task is binary classification: `legitimate` vs `phishing`
+- the current modeling strategy is `embedding -> classical classifier -> XAI`
+- the codebase prioritizes reproducibility and inspectability over minimal runtime
 
-The pipeline is designed to:
+## Documentation Map
 
-- compare several embedding paradigms, from lightweight encoders to instruction-tuned large models
-- compare multiple downstream classifiers under a controlled tuning protocol
-- support CPU and GPU execution with the same codebase
-- resume work after interruptions without recomputing everything
-- cache downloaded models and computed embeddings
-- log every relevant action to both console and file using descriptive, paper-friendly messages
-- generate local and global XAI outputs for the best model
-- expose a demo app for real-time forensic inspection
+This repository uses three complementary documentation entry points:
 
-## Experimental Design
+- [`README.md`](README.md): repository overview, current configuration, and first-run orientation
+- [`docs/README_TECHNICAL.md`](docs/README_TECHNICAL.md): operational guide for installation, execution, artifacts, and maintenance
+- [`docs/README_THEORETICAL.md`](docs/README_THEORETICAL.md): methodological and theoretical explanation of the experimental design
 
-The pipeline follows this workflow:
+The three files are intentionally different in role. The root README is the GitHub-facing overview. The technical README is the operator manual. The theoretical README explains why the pipeline is structured the way it is and what assumptions it makes.
 
-1. Load and clean the dataset.
-2. Build a reproducible dataset fingerprint after preprocessing.
-3. Compute or reuse cached embeddings for each selected embedding model.
-4. Evaluate each embedding with multiple classifiers.
-5. Tune classifier hyperparameters with `GridSearchCV`.
-6. Estimate generalization with nested cross-validation.
-7. Refit the best hyperparameter setting on the full dataset.
-8. Save models, metadata, fold-level reports, cumulative tables, and logs.
-9. Run word-ablation attribution and SHAP on representative examples from the best-performing combination.
+## Why This Project Exists
 
-## Key Methodological Decisions
+Short email subjects are operationally important because they are often the first visible cue a user receives, and they may already contain urgency, authority cues, credential prompts, account warnings, or payment requests. At the same time, subject lines are short, noisy, and context-poor, which makes both modeling and explanation difficult.
 
-### Nested Cross-Validation
+This repository exists to support a disciplined evaluation of that problem under a controlled setup:
 
-Classifier selection is not evaluated with a single optimistic cross-validation loop. Instead, the repository uses:
+- compare embedding families rather than relying on a single encoder
+- compare classical classifiers rather than assuming one downstream model is sufficient
+- separate model selection from model assessment through nested cross-validation
+- persist intermediate results so large sweeps can be resumed
+- produce explanation artifacts for the selected model instead of stopping at accuracy alone
 
-- an inner CV loop for hyperparameter selection
-- an outer CV loop for robust performance estimation
+## Current Experimental Configuration
 
-This makes the reported results much more defensible in a research setting.
+The active configuration is defined in [`config/experiment.py`](config/experiment.py). At the time of writing, the repository is configured with:
 
-### Persistent Embedding Cache
+- `13` embedding models
+- `11` classifiers
+- nested cross-validation with `5` outer folds and `3` inner folds
+- `f1_macro` as the primary model-selection metric
 
-Embeddings are cached using the fingerprint of the cleaned dataset plus the embedding identifier. If the same prepared dataset is used again, embeddings are reused instead of recomputed.
+### Embeddings
 
-### Crash Recovery
-
-Completed embedding-classifier combinations are recorded in a persistent experiment checkpoint. If the run is interrupted, the next execution can continue from the last completed state.
-
-### Hardware Agnosticism
-
-The code automatically selects the best available device:
-
-- `cuda` if available
-- `mps` on Apple Silicon
-- `cpu` otherwise
-
-Large 7B embedding models can be skipped automatically on CPU to avoid impractical runs.
-
-## Embedding Models
-
-The repository currently includes the following embedding candidates:
+The current embedding set includes:
 
 - `distilbert-base-uncased`
 - `sentence-transformers/all-mpnet-base-v2`
@@ -80,33 +60,40 @@ The repository currently includes the following embedding candidates:
 - `thenlper/gte-large`
 - `Salesforce/SFR-Embedding-2_R`
 
-Each embedding entry stores:
+These embeddings span three broad families:
 
-- exact Hugging Face repository identifier
-- representation paradigm
-- selection rationale
-- runtime hints such as batch size, remote code, token requirements, and CPU skip policy
+- transformer encoder baselines
+- sentence-transformer / contrastive encoders
+- instruction-tuned large language model embeddings
 
-The rationale field is intended to support the corresponding model-selection table in an academic paper.
+Some large models are marked `skip_on_cpu=True` in the configuration. That means the pipeline may omit them automatically on CPU-only hardware to avoid impractical runs.
 
-## Classifiers
+### Classifiers
 
-The current downstream classifiers are:
+The active classifier set is:
 
-- Logistic Regression
-- Linear SVM
-- RBF SVM
-- Random Forest
-- Gradient Boosting
-- MLP
-- KNN
+- `logistic_regression`
+- `linear_svc`
+- `svm_rbf`
+- `sgd_classifier`
+- `random_forest`
+- `extra_trees`
+- `mlp`
+- `knn`
+- `decision_tree`
+- `gaussian_nb`
+- `lda`
 
-Each classifier includes:
+This set was chosen to cover a range of modeling assumptions:
 
-- constructor settings
-- whether feature scaling is applied
-- a full hyperparameter grid
-- a short methodological note
+- linear discriminative models
+- margin-based models
+- probabilistic baselines
+- tree-based learners
+- neighborhood methods
+- a shallow neural baseline
+
+Each classifier has an explicit hyperparameter grid in [`config/experiment.py`](config/experiment.py). Those grids are part of the documented experiment design, not an implementation detail.
 
 ## Repository Structure
 
@@ -114,19 +101,18 @@ Each classifier includes:
 .
 |-- config/
 |   |-- experiment.py
-|   `-- paths.py
+|   |-- paths.py
+|   `-- __init__.py
 |-- data/
+|   `-- .gitkeep
 |-- demo_app/
 |   |-- api.py
 |   `-- static/
+|-- docs/
+|   |-- README_TECHNICAL.md
+|   `-- README_THEORETICAL.md
 |-- results/
-|   |-- cache/
-|   |-- checkpoints/
-|   |-- runs/
-|   `-- tables/
 |-- secrets/
-|   |-- groq.txt
-|   `-- huggingface.txt
 |-- src/
 |   |-- embeddings/
 |   |-- utils/
@@ -136,284 +122,161 @@ Each classifier includes:
 |   |-- run_artifacts.py
 |   |-- trainer.py
 |   `-- xai_runner.py
+|-- .gitignore
+|-- environment.yml
 |-- main.py
-`-- main_emb.py   # Compatibility wrapper for embeddings-only mode
+`-- README.md
 ```
 
-## Installation
+Important version-control notes:
 
-Create the conda environment from `environment.yml`:
+- the `data/` directory exists in the repository, but dataset files are intentionally ignored and must be provided locally
+- the `results/` directory is intentionally ignored because it can become very large
+- `secrets/` is intentionally ignored
+
+## What The Pipeline Does
+
+At a high level, the pipeline performs the following steps:
+
+1. Load a CSV dataset from disk.
+2. Detect or receive the subject column and label column.
+3. Clean and normalize the subject text.
+4. Map labels to binary values.
+5. Build a reproducible dataset fingerprint after preprocessing.
+6. Compute or reuse cached embeddings for each selected embedding model.
+7. Evaluate each embedding with each selected classifier under nested cross-validation.
+8. Refit the best hyperparameter setting on the full dataset.
+9. Persist artifacts, tables, metadata, and logs.
+10. Run XAI for the selected winning combination unless the user disables that stage.
+
+## Reproducibility and Persistence
+
+The project includes several persistence mechanisms:
+
+- dataset fingerprinting after preprocessing
+- embedding cache under `results/cache/embeddings/`
+- experiment checkpointing under `results/checkpoints/`
+- run-specific artifacts under `results/runs/<run_id>/`
+- cumulative tabulation under `results/tables/all_results.csv`
+
+This matters because the experiment space can be large. Without these mechanisms, reruns after interruption would be unnecessarily expensive.
+
+## XAI Scope
+
+The repository includes three explanation layers in the current codebase:
+
+- word ablation / leave-one-out attribution
+- SHAP-based explanation
+- natural-language explanation generation for the demo and explanation outputs
+
+The XAI stage is intended to help inspect model behavior, not to prove causal linguistic structure. The explanations are post hoc and should be read as diagnostic evidence about model behavior under the current pipeline, not as a guarantee of semantic truth.
+
+## Quick Start
+
+Create the environment:
 
 ```bash
 conda env create -f environment.yml
 conda activate xai
 ```
 
-If you want to run gated Hugging Face embedding models such as Llama, set a valid token:
-
-```bash
-export HF_TOKEN=your_token_here
-```
-
-On Windows PowerShell:
-
-```powershell
-$env:HF_TOKEN="your_token_here"
-```
-
-## Secrets
-
-Runtime secrets for the demo app must live in the dedicated `secrets/` directory at the project root.
-
-Expected files:
-
-- `secrets/groq.txt`
-- `secrets/huggingface.txt`
-
-Each file should contain only the raw token, with no extra quotes or JSON wrapper.
-
-By default the application reads secrets from `./secrets`. You can override that location with the `XAI_SECRETS_DIR` environment variable. The provided `environment.yml` already defines that variable.
-
-Notes:
-
-- `secrets/huggingface.txt` is used by the natural-language XAI demo layer.
-- `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` are still used by the embedding pipeline when downloading gated Hugging Face models.
-
-## Dataset Expectations
-
-The pipeline expects a CSV file containing:
-
-- one subject column
-- one label column
-
-By default, the loader tries to infer common column names such as:
-
-- subject-like: `subject`, `asunto`, `title`
-- label-like: `label`, `class`, `target`, `is_phishing`
-
-If needed, you can specify them explicitly with CLI arguments.
-
-Labels are mapped to binary classes:
-
-- `0`: legitimate
-- `1`: phishing
-
-Several common textual label variants are already supported.
-
-## Usage
-
-### Quick Commands
-
-Full experiment:
+Run the full pipeline:
 
 ```bash
 python main.py
 ```
 
-Show the extended CLI help:
+Show the CLI help:
 
 ```bash
 python main.py --help
 ```
 
-Alternative help aliases:
-
-```bash
-python main.py --h
-python main.py -help
-```
-
-Run only the embedding cache stage:
-
-```bash
-python main.py --embeddings-only
-```
-
-Legacy wrapper equivalent:
-
-```bash
-python main_emb.py
-```
-
-Reuse a previous run and generate XAI only:
-
-```bash
-python main.py --run-id 20260327_123456 --only-xai
-```
-
-### CLI Parameters
-
-`--data`
-: CSV path to load. Use it when you want to switch datasets without touching the code.
-
-`--subject-column`
-: Explicit subject/text column name. Useful when your CSV header is not one of the auto-detected defaults.
-
-`--label-column`
-: Explicit label column name. Use it when the dataset stores labels under a custom name.
-
-`--embeddings`
-: One or more embedding IDs to evaluate. If omitted, the pipeline evaluates all embeddings defined in `config.experiment`.
-
-`--classifiers`
-: One or more classifier IDs to evaluate. Good for faster ablations or targeted comparisons.
-
-`--skip-xai`
-: Runs the experiment and selects the best model, but stops before generating explanation artefacts.
-
-`--only-xai`
-: Skips training and evaluation and reuses a previous run to generate XAI only. In practice this should be used together with `--run-id`.
-
-`--embeddings-only`
-: Computes or refreshes the embedding cache only. No classifier training, no model selection, and no XAI generation.
-
-`--n-xai`
-: Number of representative texts to explain during the XAI phase. This matters only when XAI is enabled.
-
-`--run-id`
-: Reuses an existing run directory. Most useful with `--only-xai`, but it can also help you keep outputs grouped under a known identifier.
-
-### Example Recipes
-
-Run the full pipeline on another dataset:
-
-```bash
-python main.py --data data/your_dataset.csv
-```
-
-Force the subject and label columns:
-
-```bash
-python main.py --data data/your_dataset.csv --subject-column subject --label-column label
-```
-
-Evaluate only two embeddings:
+Run only a subset of embeddings:
 
 ```bash
 python main.py --embeddings sentence-transformers/all-mpnet-base-v2 BAAI/bge-m3
 ```
 
-Evaluate only one classifier:
+Run only a subset of classifiers:
 
 ```bash
-python main.py --classifiers logistic_regression
+python main.py --classifiers logistic_regression linear_svc
 ```
 
-Prepare embeddings only for a subset of models:
-
-```bash
-python main.py --embeddings-only --embeddings sentence-transformers/all-mpnet-base-v2 BAAI/bge-m3
-```
-
-Run training without explanations:
+Run training without the XAI stage:
 
 ```bash
 python main.py --skip-xai
 ```
 
-## XAI PowerToy (Demo App)
+More detailed operational guidance is in [`docs/README_TECHNICAL.md`](docs/README_TECHNICAL.md).
 
-The repository includes a web-based demonstration tool called the **PowerToy**, designed for non-technical users to explore the model's decision-making process in real-time.
+## Inputs and Assumptions
 
-### Features
+The default dataset path is:
 
-- **Real-Time Forensic Console**: Displays the analysis steps (Embeddings, LIME, LLM) as they happen via a streaming backend.
-- **Master XAI Reasoning**: An AI-generated synthesis that integrates model confidence and word-level impacts into a human-readable narrative.
-- **Risk Impact Visualization**: Highlights critical keywords within the subject line and displays their percentage contribution to the phishing risk.
-- **Malicious Email Simulation**: Generates a plausible email body to demonstrate how the detected subject would look in a real attack scenario.
+```text
+data/pop_dataset_Full(Tiltan).csv
+```
 
-### Running the PowerToy
+That file is not distributed through the repository. The directory is kept so collaborators can place local datasets there without changing project structure.
 
-1. Ensure the `xai` conda environment is active.
-2. Launch the FastAPI server:
-   ```bash
-   python demo_app/api.py
-   ```
-3. Open your browser at `http://localhost:8000`.
+The loader expects:
 
-## Outputs
+- one subject-like text column
+- one label-like column
 
-Each run creates a dedicated directory under `results/runs/<run_id>/`.
+Supported default subject-like names:
 
-Typical outputs include:
+- `subject`
+- `asunto`
+- `title`
 
-- `run.log`: descriptive execution log
-- `run_manifest.json`: run-level metadata
-- `prepared_dataset.csv`: cleaned dataset used by the experiment
-- `best_model.joblib`: copied best model for the run
-- `best_model_meta.json`: metadata for the best model
-- `trained_models_registry.json`: registry of trained embedding-classifier models
-- `nested_cv_details/*.json`: per-combination fold-level evaluation records
-- `xai/lime/*`: LIME plots and explanation data
-- `xai/shap/*`: SHAP plots and explanation data
+Supported default label-like names:
 
-Global reusable outputs include:
+- `label`
+- `class`
+- `target`
+- `is_phishing`
 
-- `results/cache/embeddings/`: persistent embedding cache
-- `results/checkpoints/`: persistent experiment checkpoints
-- `results/tables/all_results.csv`: cumulative result table across runs
+Supported label values include:
 
-## Logging
-
-The logging system is intentionally verbose and descriptive. It is designed to answer questions such as:
-
-- what was loaded and from where
-- which device was used
-- which embedding was skipped and why
-- which hyperparameters were selected in each fold
-- which model won and with what metrics
-- which XAI artifacts were generated
-
-This makes the logs useful not only for debugging, but also for reconstructing the experimental narrative later.
-
-## XAI
-
-The best embedding-classifier pair is explained with:
-
-- LIME for local word-level contributions
-- SHAP for local and aggregated token-level contributions
-
-Representative examples are selected from a mix of:
-
-- true positives
-- true negatives
-- false positives
-- false negatives
-
-This avoids explaining only the easy cases.
-
-## Reproducibility
-
-The repository includes several mechanisms to improve reproducibility:
-
-- centralized experiment configuration
-- stable dataset fingerprint after preprocessing
-- persistent embedding cache
-- persistent checkpointing
-- run-specific manifests and artifacts
-- cumulative results table
-- explicit hyperparameter grids
-- fixed random seeds in the evaluation protocol
+- phishing-like: `phishing`, `phish`, `spam`, `malicious`, `1`, `true`, `yes`
+- legitimate-like: `legitimate`, `legit`, `ham`, `benign`, `0`, `false`, `no`
 
 ## Current Limitations
 
-- The pipeline currently works on subject text only, not full email bodies.
-- Large embedding models may still be expensive even on GPU.
-- SHAP can be slow because it repeatedly queries the full text-to-embedding-to-classifier pipeline.
-- The repository assumes a classical ML downstream stage, not end-to-end fine-tuning.
+The project should be understood with the following limitations in mind:
 
-## Recommended Next Steps
+- it operates on subject lines only, not full email bodies
+- some large embedding models may be skipped on CPU hardware
+- the run space can become expensive with the full 13 x 11 configuration
+- XAI outputs are post hoc explanations of the trained pipeline, not direct causal explanations
+- the repository currently has no automated test suite
+- the demo application depends on previously generated run artifacts and result tables
 
-- add automated tests for configuration, dataset loading, and checkpoint behavior
-- add export utilities for LaTeX tables
-- add a paper-ready experiment summary generator
-- add support for train/validation/test protocols in addition to nested CV
-- add optional dimensionality reduction and calibration analysis
+## What This Repository Is For
 
-## Citation
+This repository is suitable for:
 
-If you use this repository in academic work, cite the paper that accompanies the experiments once available.
+- controlled experimentation
+- comparative benchmarking across embeddings and classifiers
+- production of artifacts for reporting and later paper writing
+- forensic inspection of model behavior on short subjects
+
+This repository is not, in its current state, a drop-in production phishing defense system.
+
+## Recommended Reading Order
+
+For a new collaborator, the most useful reading order is:
+
+1. [`README.md`](README.md)
+2. [`docs/README_TECHNICAL.md`](docs/README_TECHNICAL.md)
+3. [`docs/README_THEORETICAL.md`](docs/README_THEORETICAL.md)
+4. [`config/experiment.py`](config/experiment.py)
+5. [`main.py`](main.py)
 
 ## License
 
-Add your preferred open-source license here.
+No project license is declared yet in this repository.
