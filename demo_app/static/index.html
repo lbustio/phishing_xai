@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing XAI | PowerToy</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <div class="brand-box">
+                    <div class="brand-lockup">
+                        <div class="brand-logo-badge">
+                            <div class="brand-logo-badge-inner">
+                                <img src="logo-corporate.svg" alt="Phishing XAI Shield logo" class="brand-logo">
+                            </div>
+                        </div>
+                        <div class="brand-title-block">
+                            <h1>Phishing XAI <span class="shield-text">Shield</span></h1>
+                            <p class="brand-tagline">Forensic Threat Intelligence Console</p>
+                        </div>
+                    </div>
+                    <div class="scientific-desc">
+                        <p><strong>Plataforma Forense de Análisis de Atribución y Explicabilidad Profunda (XAI)</strong></p>
+                        <p class="tech-stack" id="dynamicTechStack">Detectando configuración del pipeline forense...</p>
+                    </div>
+                </div>
+                <button id="soundToggle" class="sound-toggle" title="Alternar Sonido">
+                    <span id="soundIcon">🔊</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Input Area -->
+        <main class="input-section glass-panel">
+            <h2>Analizador de Asuntos</h2>
+            <div class="input-group">
+                <input type="text" id="subjectInput" placeholder="Ej: URGENTE: Su cuenta será suspendida si no verifica..." autocomplete="off">
+                <button id="analyzeBtn">ANALIZAR RIESGO</button>
+            </div>
+
+            <!-- Terminal de Logs (Tiempo Real) -->
+            <div id="logTerminal" class="log-terminal hidden">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                    <span class="terminal-title">Consola de Análisis Forense</span>
+                </div>
+                <div id="logContent" class="log-content"></div>
+            </div>
+            
+            <div id="loader" class="hidden">
+                <div class="spinner"></div>
+                <div class="loader-text">
+                    <p id="loaderMessage">Iniciando escaneo cuántico...</p>
+                    <div class="progress-bar"><div class="progress"></div></div>
+                </div>
+                <button id="cancelBtn" class="cancel-btn">CANCELAR ANÁLISIS</button>
+            </div>
+        </main>
+
+        <!-- Results Area -->
+        <section id="resultsSection" class="results-section hidden">
+            <!-- Master Reasoning (Synthesized XAI) -->
+            <div id="masterReasoningPanel" class="master-reasoning glass-panel hidden">
+                <div class="master-header">
+                    <div class="ai-brain-icon">🧠</div>
+                    <div class="master-title">
+                        <h3>Razonamiento Maestro XAI</h3>
+                        <p>Síntesis Integral del Análisis Forense</p>
+                    </div>
+                </div>
+                <div id="masterExplanation" class="master-explanation-text">
+                    Iniciando síntesis de datos científicos...
+                </div>
+            </div>
+
+            <!-- Left: XAI Explainability -->
+            <div class="xai-panel glass-panel danger-theme" id="xaiPanel">
+                <div class="threat-header">
+                    <div class="threat-level" id="threatIcon">⚠️</div>
+                    <div class="threat-info">
+                        <h3 id="threatTitle">Alto Riesgo: Phishing Detectado</h3>
+                        <span id="threatConfidence" class="confidence-badge">Certeza: 98%</span>
+                    </div>
+                </div>
+                
+                <div class="explanation-box">
+                    <h4>Diagnóstico XAI (Traducción Natural):</h4>
+                    <p id="naturalExplanation">Cargando...</p>
+                </div>
+
+                <div class="keywords-box" id="keywordsBox">
+                    <h4>Desencadenantes Algorítmicos Detectados (Leave-One-Out):</h4>
+                    <div class="chips" id="keywordChips"></div>
+                </div>
+            </div>
+
+            <!-- Right: Forensic Attack Evidence -->
+            <div class="email-panel glass-panel">
+                <div class="email-mockup">
+                    <div class="email-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                        <span class="email-title">Vista Previa (Entorno Protegido)</span>
+                    </div>
+                    <div class="email-metadata">
+                        <p><strong>De:</strong> <span class="spoofed">seguridad@apple-soporte-oficial-24.com</span></p>
+                        <p><strong>Asunto:</strong> <span id="emailSubjectPrev">...</span></p>
+                    </div>
+                    <div class="email-body">
+                        <p id="emailBodySim">Reconstruyendo vector de ataque...</p>
+                        <a href="#" class="malicious-btn">Verificar Cuenta (Prueba de Concepto)</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Controles de Acción Global -->
+        <div id="resultActions" class="result-actions hidden">
+            <button id="exportPdfBtn" class="export-pdf-btn">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Exportar Reporte Forense (PDF)</span>
+            </button>
+        </div>
+        <footer class="site-footer site-footer-primary">
+            <div class="footer-shell glass-panel">
+                <div class="footer-kicker">Phishing XAI Shield</div>
+                <p class="footer-disclaimer">Plataforma de investigaci&oacute;n acad&eacute;mica. Los an&aacute;lisis son aproximaciones estad&iacute;sticas, no veredictos definitivos. El cuerpo de correo reconstruido es contenido sint&eacute;tico generado &uacute;nicamente con fines did&aacute;cticos.</p>
+                <p class="footer-tech-label">Tecnolog&iacute;as usadas</p>
+                <div class="footer-stack" aria-label="Technology stack">
+                    <span class="footer-pill">Cargando...</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Sidebar de Historial -->
+    <div id="historySidebar" class="history-sidebar">
+        <div class="sidebar-header">
+            <h3>Historial Forense</h3>
+            <button id="closeHistory" class="close-btn">&times;</button>
+        </div>
+        <div id="historyList" class="history-list">
+            <!-- Tarjetas de historial se insertan aquí -->
+            <p class="empty-msg">No hay análisis previos.</p>
+        </div>
+    </div>
+
+    <div id="historyModalOverlay" class="history-modal-overlay hidden" aria-hidden="true">
+        <div class="history-modal-shell">
+            <div class="history-modal-topbar glass-panel">
+                <div>
+                    <p class="history-modal-kicker">Historial Forense</p>
+                    <h3>Detalle del análisis archivado</h3>
+                </div>
+                <div class="history-modal-actions">
+                    <button id="exportHistoryPdfBtn" class="export-pdf-btn history-export-btn">
+                        <span>Exportar PDF</span>
+                    </button>
+                    <button id="closeHistoryModal" class="close-btn history-modal-close" aria-label="Cerrar detalle del historial">&times;</button>
+                </div>
+            </div>
+
+            <section id="historyModalResults" class="results-section history-modal-results">
+                <div class="xai-panel glass-panel danger-theme" id="historyXaiPanel">
+                    <div class="threat-header">
+                        <div class="threat-level" id="historyThreatIcon">⚠️</div>
+                        <div class="threat-info">
+                            <h3 id="historyThreatTitle">Alto Riesgo: Phishing Detectado</h3>
+                            <span id="historyThreatConfidence" class="confidence-badge">Certeza: 98%</span>
+                        </div>
+                    </div>
+
+                    <div class="explanation-box">
+                        <h4>Diagnóstico XAI (Traducción Natural):</h4>
+                        <p id="historyNaturalExplanation">Cargando...</p>
+                    </div>
+
+                    <div class="keywords-box">
+                        <h4>Desencadenantes Algorítmicos Detectados (Leave-One-Out):</h4>
+                        <div class="chips" id="historyKeywordChips"></div>
+                    </div>
+                </div>
+
+                <div class="email-panel glass-panel">
+                    <div class="email-mockup">
+                        <div class="email-header">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="email-title">Vista Previa (Entorno Protegido)</span>
+                        </div>
+                        <div class="email-metadata">
+                            <p><strong>De:</strong> <span class="spoofed">seguridad@apple-soporte-oficial-24.com</span></p>
+                            <p><strong>Asunto:</strong> <span id="historyEmailSubjectPrev">...</span></p>
+                        </div>
+                        <div class="email-body">
+                            <p id="historyEmailBodySim">Reconstruyendo vector de ataque...</p>
+                            <a href="#" class="malicious-btn">Verificar Cuenta (Prueba de Concepto)</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Botón Flotante para Historial -->
+    <button id="soundToggleFloating" class="floating-action-btn sound-toggle" title="Alternar Sonido">
+        <span id="soundIconFloating" aria-hidden="true"></span>
+    </button>
+
+    <button id="openHistory" class="floating-history-btn" title="Ver Historial">
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="history-icon-svg">
+            <path d="M12 8v4l3 3"></path>
+            <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
+            <circle cx="12" cy="12" r="1" fill="currentColor"></circle>
+        </svg>
+    </button>
+
+    <footer class="site-footer">
+        <div class="footer-shell glass-panel">
+            <div class="footer-kicker">Academic Research Platform</div>
+            <p class="footer-disclaimer footer-disclaimer-clean">Plataforma de investigaci&oacute;n acad&eacute;mica. Los an&aacute;lisis son aproximaciones estad&iacute;sticas, no veredictos definitivos. El cuerpo de correo reconstruido es contenido sint&eacute;tico generado &uacute;nicamente con fines did&aacute;cticos.</p>
+            <p class="footer-disclaimer footer-disclaimer-shell">Plataforma de investigaciÃ³n acadÃ©mica. Los anÃ¡lisis son aproximaciones estadÃ­sticas, no veredictos definitivos. El cuerpo de correo reconstruido es contenido sintÃ©tico generado Ãºnicamente con fines didÃ¡cticos.</p>
+            <div class="footer-stack footer-stack-shell" aria-label="Technology stack">
+                <span class="footer-pill">Leave-One-Out XAI</span>
+                <span class="footer-pill">SentenceTransformers</span>
+                <span class="footer-pill">FastAPI</span>
+                <span class="footer-pill">Groq</span>
+            </div>
+        </div>
+        <p class="footer-disclaimer">Plataforma de investigación académica. Los análisis son aproximaciones estadísticas, no veredictos definitivos. El cuerpo de correo reconstruido es contenido sintético generado únicamente con fines didácticos.</p>
+        <p class="footer-stack">Leave-One-Out XAI &middot; SentenceTransformers &middot; FastAPI &middot; Groq</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

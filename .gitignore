@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter and editor noise
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.code-workspace
+
+# Local environments
+.venv/
+venv/
+env/
+.env
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Local secrets
+secrets/
+*.key
+*.pem
+
+# Temporary or backup files
+*.log
+*.tmp
+*.bak
+*.bck
+
+# Experiment artifacts and model caches
+results/cache/
+results/checkpoints/
+results/logs/
+results/temp/
+results/runs/
+results/powertoy_cache.json
+results/powertoy_history.json
+
+# Keep lightweight summary tables if desired
+!results/
+!results/tables/
+!results/tables/*.csv

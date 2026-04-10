@@ -1,0 +1,41 @@
+name: xai
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - joblib
+  - psutil
+  - pytorch>=2.6.0
+  - cpuonly
+  - cmake
+  - numba
+  - shap
+  - pip:
+      # Infrastructure & API
+      - fastapi
+      - uvicorn
+      - pydantic
+      - requests
+      
+      # Model & Embeddings
+      - transformers
+      - sentence-transformers
+      - huggingface_hub
+      - accelerate
+      
+      # Intelligence & XAI
+      - lime
+      - groq
+      - tenacity
+      
+      # Forensic Reporting
+      - jinja2
+variables:
+  XAI_SECRETS_DIR: ./secrets

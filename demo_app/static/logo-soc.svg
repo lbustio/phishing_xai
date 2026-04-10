@@ -1,0 +1,35 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="socFrame" x1="88" y1="78" x2="408" y2="436" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6EFFF1"/>
+      <stop offset="0.55" stop-color="#22C1FF"/>
+      <stop offset="1" stop-color="#0B2753"/>
+    </linearGradient>
+    <linearGradient id="socRed" x1="300" y1="110" x2="396" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9BA5"/>
+      <stop offset="1" stop-color="#FF4D5E"/>
+    </linearGradient>
+    <filter id="socGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.133 0 0 0 0 0.757 0 0 0 0 1 0 0 0 0.45 0"/>
+      <feBlend mode="screen" in="SourceGraphic"/>
+    </filter>
+  </defs>
+
+  <rect x="28" y="28" width="456" height="456" rx="100" fill="#040B16"/>
+  <circle cx="256" cy="256" r="182" stroke="rgba(34,193,255,0.12)" stroke-width="24"/>
+
+  <g filter="url(#socGlow)">
+    <path d="M256 84L384 134V246C384 334.333 330.333 412 256 440C181.667 412 128 334.333 128 246V134L256 84Z" fill="url(#socFrame)"/>
+    <path d="M256 110L363 152V240C363 310.092 321.563 376.285 256 401C190.437 376.285 149 310.092 149 240V152L256 110Z" fill="#07172E"/>
+    <path d="M173 256C194.749 221.583 222.416 204.375 256 204.375C289.584 204.375 317.251 221.583 339 256C317.251 290.417 289.584 307.625 256 307.625C222.416 307.625 194.749 290.417 173 256Z" stroke="#8DFFF5" stroke-width="14" fill="none"/>
+    <circle cx="256" cy="256" r="42" fill="#8DFFF5"/>
+    <circle cx="256" cy="256" r="15" fill="#07172E"/>
+    <path d="M176 354L220 310" stroke="#8DFFF5" stroke-width="14" stroke-linecap="round"/>
+    <path d="M292 310L336 354" stroke="#8DFFF5" stroke-width="14" stroke-linecap="round"/>
+  </g>
+
+  <path d="M318 122H382V186" stroke="url(#socRed)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M382 122L306 198" stroke="url(#socRed)" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="348" cy="156" r="60" stroke="url(#socRed)" stroke-width="10"/>
+</svg>
