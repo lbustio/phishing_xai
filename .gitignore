@@ -39,4 +39,5 @@ secrets/
 results/
 
 # Non-distributable datasets
-data/
+data/*
+!data/.gitkeep
