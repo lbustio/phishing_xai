@@ -351,4 +351,4 @@ For a new collaborator, the most useful reading order is:
 
 ## License
 
-No project license is declared yet in this repository.
+This repository is released under the [MIT License](LICENSE).
