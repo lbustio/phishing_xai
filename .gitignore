@@ -37,3 +37,6 @@ secrets/
 
 # Experiment artifacts and model caches
 results/
+
+# Non-distributable datasets
+data/
