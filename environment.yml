@@ -32,10 +32,12 @@ dependencies:
       
       # Intelligence & XAI
       - lime
+      - langdetect
       - groq
       - tenacity
       
-      # Forensic Reporting
+      # Demo / reporting surface
       - jinja2
+      # Plotly is loaded in the browser from CDN; it is not required as a Python package here.
 variables:
   XAI_SECRETS_DIR: ./secrets

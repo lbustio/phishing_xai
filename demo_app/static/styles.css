@@ -384,6 +384,19 @@ button:hover {
     line-height: 1.6;
 }
 
+.semantic-reasoning-note {
+    margin-top: 0.95rem;
+    padding-top: 0.95rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+    color: rgba(191, 219, 254, 0.96);
+    font-size: 0.94rem;
+    line-height: 1.7;
+}
+
+.semantic-reasoning-note strong {
+    color: #f8fafc;
+}
+
 .keywords-box h4 {
     color: var(--text-muted);
     font-size: 0.8rem;
@@ -404,6 +417,8 @@ button:hover {
     padding: 0.4rem 0.8rem;
     border-radius: 16px;
     font-size: 0.85rem;
+    cursor: help;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .safe-theme .chip {
     background: rgba(16, 185, 129, 0.1);
@@ -420,6 +435,170 @@ button:hover {
     background: rgba(16, 185, 129, 0.08);
     border-color: rgba(16, 185, 129, 0.3);
     color: #6ee7b7;
+}
+.chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.semantic-panel {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    border-color: rgba(59, 130, 246, 0.26);
+    background:
+        linear-gradient(180deg, rgba(10, 18, 31, 0.92), rgba(7, 13, 26, 0.88)),
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 55%);
+}
+
+.semantic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.semantic-header h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.3rem;
+}
+
+.semantic-header p {
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 58ch;
+}
+
+.semantic-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.semantic-controls-static {
+    justify-content: flex-start;
+}
+
+.semantic-static-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.semantic-slider-group {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    color: var(--text-main);
+}
+
+.semantic-slider-group span {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.semantic-slider-group input[type="range"] {
+    width: 140px;
+}
+
+.semantic-mode-btn {
+    padding: 0.8rem 1rem;
+    font-size: 0.76rem;
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(96, 165, 250, 0.22);
+}
+
+.semantic-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+    gap: 1.25rem;
+}
+
+.semantic-canvas-shell {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.semantic-plot {
+    min-height: 520px;
+    width: 100%;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.semantic-placeholder {
+    min-height: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    color: rgba(226, 232, 240, 0.86);
+    font-size: 1rem;
+    line-height: 1.7;
+    background:
+        linear-gradient(180deg, rgba(7, 12, 24, 0.82), rgba(10, 18, 31, 0.74)),
+        radial-gradient(circle at top, rgba(59, 130, 246, 0.12), transparent 60%);
+}
+
+.semantic-note {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.semantic-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.semantic-metric-card {
+    background: rgba(7, 12, 24, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 14px;
+    padding: 1rem 1rem 0.95rem;
+}
+
+.semantic-metric-card h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(191, 219, 254, 0.88);
+    margin-bottom: 0.55rem;
+}
+
+.semantic-metric-card p {
+    color: var(--text-main);
+    line-height: 1.6;
+    font-size: 0.94rem;
+    word-break: break-word;
+}
+
+.hover-card {
+    border-color: rgba(96, 165, 250, 0.2);
+    background: rgba(10, 18, 34, 0.84);
 }
 
 /* Email Mockup */
@@ -476,6 +655,17 @@ button:hover {
 
 @media (max-width: 850px) {
     .results-section { grid-template-columns: 1fr; }
+    .semantic-body { grid-template-columns: 1fr; }
+    .semantic-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .semantic-controls {
+        justify-content: flex-start;
+    }
+    .semantic-plot {
+        min-height: 420px;
+    }
     .history-modal-overlay { padding: 1rem; }
     .history-modal-topbar {
         padding: 1rem;

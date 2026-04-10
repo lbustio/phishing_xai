@@ -227,6 +227,35 @@ The SHAP layer provides another post hoc perspective on how the pipeline respond
 
 The natural-language explanation layer translates algorithmic outputs into a more readable narrative. This is useful for demos and interpretation support, but it should not be mistaken for an independent source of truth. It is downstream of the underlying attribution signals.
 
+In the current demo implementation, the explanation and body-generation policies are intentionally separated:
+
+- the reasoning text is always generated in Spanish
+- the synthetic email body is generated in the detected language of the analyzed subject
+
+This is a presentation rule for operator usability. It does not change the underlying classifier output.
+
+### 11.4 Interactive Semantic Projection
+
+The current PowerToy also includes an interactive semantic map:
+
+- the points correspond to real subjects from the dataset used by the selected run
+- the coordinates come from a 2D PCA projection of real embeddings
+- phishing and legitimate examples are shown as different color regions
+- the analyzed subject is inserted into the same projected space as a separate marker
+- nearest neighbors and class centroids are exposed to the user as interpretive cues
+- the semantic reading is summarized in prose inside the reasoning panel
+- the same semantic evidence can be reconstructed later from the history-detail view
+
+This view is useful because it gives an operator a geometric intuition for local structure in the embedding space. However, it must be interpreted carefully.
+
+- the map is not the classifier itself
+- the 2D layout is a projection, not the full feature space
+- the scientifically relevant similarity values should be those computed in the original embedding space
+
+For that reason, the current demo reports cosine similarity and cosine distance relative to the analyzed subject while using the 2D panel only as a visual aid.
+
+The repository also treats frontend analyses as reportable artifacts rather than transient UI events. Each PowerToy analysis can therefore leave behind a persistent case folder under `results/frontend_analyses/`, which is separate from the training-run artifacts under `results/runs/`.
+
 ## 12. Important Interpretation Caveat
 
 The project produces explanations of model behavior, not explanations of the world.
@@ -236,6 +265,7 @@ That distinction matters:
 - if a keyword receives high attribution, that means the trained pipeline used it strongly in that instance
 - it does not automatically mean the keyword is inherently malicious in every context
 - it does not prove causal attack semantics
+- if two points appear close in the 2D semantic map, that is an interpretive cue, not by itself proof of classifier causality
 
 In other words, the XAI outputs are diagnostic and analytical, not ontological proof.
 

@@ -41,6 +41,7 @@ The declared dependencies include:
 - `huggingface_hub`
 - `accelerate`
 - `lime`
+- `langdetect`
 - `groq`
 - `jinja2`
 
@@ -85,6 +86,7 @@ The project expects these root-level directories to exist:
 The paths are centralized in [`../config/paths.py`](../config/paths.py). That module creates required directories automatically at import time, including:
 
 - `results/cache/`
+- `results/frontend_analyses/`
 - `results/runs/`
 - `results/tables/`
 - `results/checkpoints/`
@@ -183,7 +185,37 @@ The current project uses secrets in two distinct ways:
 - Hugging Face tokens for gated model access and some explanation flows
 - Groq token for the natural-language explanation layer in the demo flow
 
+Language handling in the current demo is implemented explicitly:
+
+- the explanatory reasoning is always requested in Spanish
+- the synthetic email body is requested in the detected language of the analyzed subject
+- arbitrary subject languages rely on `langdetect`; if it is missing, the code falls back to a simple Spanish-vs-English heuristic
+
 The `secrets/` directory is ignored by Git and should remain local.
+
+## 6.1 Frontend Analysis Persistence
+
+The PowerToy now persists each frontend analysis under:
+
+```text
+results/frontend_analyses/<analysis_id>/
+```
+
+Each directory is created when the frontend analysis result is finalized. The backend writes structured textual artifacts immediately. The browser then uploads visual/export artifacts when they are available.
+
+Typical contents:
+
+- `analysis_result.json`
+- `metadata.json`
+- `processing_log.txt`
+- `reasoning.txt`
+- `keywords.json`
+- `synthetic_email_body.txt`
+- `semantic_map.json`
+- `semantic_scatter.png`
+- `forensic_report.pdf`
+
+This artifact space is separate from `results/runs/`. Training runs document model development. Frontend analyses document operator-facing case studies and reportable examples produced through the PowerToy flow.
 
 ## 7. Main Pipeline Entry Point
 
@@ -404,7 +436,32 @@ The demo:
 - computes phishing probability for a user-supplied subject
 - computes leave-one-out keyword attribution
 - generates a natural-language explanation
+- generates a synthetic email body in the detected language of the subject
+- reconstructs a semantic map from the real dataset and real embeddings of the selected run
+- projects the semantic space to 2D with PCA for interactive visualization
+- exposes per-point hover inspection with cosine similarity and cosine distance to the analyzed subject
+- reports nearest-neighbor and centroid distances by class
+- injects a semantic reading note into the reasoning panel
+- reconstructs the same semantic view inside the history-detail modal
+- can export a PDF that includes the semantic reading and the scatter snapshot when available
 - stores local demo cache and local history files
+- stores per-analysis frontend artifacts under `results/frontend_analyses/`
+
+### 10.4 Demo Semantics and Interaction
+
+The current semantic panel in the PowerToy is based on:
+
+- the dataset referenced by the selected run manifest
+- the embedding model selected by the demo
+- cached embeddings reused from `results/cache/embeddings/` when available
+- a `PCA` projection to two dimensions for display only
+
+Important interpretation rule:
+
+- the 2D coordinates are only for visualization
+- the reported similarity and distance values are computed in the original embedding space with cosine similarity / cosine distance
+
+The browser-side chart is rendered with Plotly loaded from a CDN at runtime. It is not a Python dependency in `environment.yml`.
 
 ## 11. Logging
 

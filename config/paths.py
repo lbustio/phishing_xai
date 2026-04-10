@@ -15,6 +15,7 @@ CHECKPOINTS_DIR = RESULTS_DIR / "checkpoints"
 EMBEDDING_CACHE_DIR = CACHE_DIR / "embeddings"
 HF_CACHE_HINT_DIR = CACHE_DIR / "huggingface"
 TEMP_DEMO_XAI_DIR = RESULTS_DIR / "temp_demo_xai"
+FRONTEND_ANALYSES_DIR = RESULTS_DIR / "frontend_analyses"
 
 for directory in [
     DATA_DIR,
@@ -27,5 +28,6 @@ for directory in [
     EMBEDDING_CACHE_DIR,
     HF_CACHE_HINT_DIR,
     TEMP_DEMO_XAI_DIR,
+    FRONTEND_ANALYSES_DIR,
 ]:
     directory.mkdir(parents=True, exist_ok=True)

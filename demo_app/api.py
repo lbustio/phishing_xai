@@ -1,9 +1,11 @@
 import json
+import base64
 import queue as _stdlib_queue
 from contextlib import asynccontextmanager
 import logging
 import os
 from pathlib import Path
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +21,7 @@ import asyncio
 import csv
 import requests
 import sys
+from sklearn.decomposition import PCA
 
 
 class _QueueLogHandler(logging.Handler):
@@ -35,8 +38,10 @@ class _QueueLogHandler(logging.Handler):
 project_root = Path(__file__).resolve().parent.parent
 sys.path.append(str(project_root))
 
-from config.paths import RUNS_DIR, TABLES_DIR, HF_CACHE_HINT_DIR, RESULTS_DIR, TEMP_DEMO_XAI_DIR
+from config.paths import RUNS_DIR, TABLES_DIR, HF_CACHE_HINT_DIR, RESULTS_DIR, TEMP_DEMO_XAI_DIR, DATA_DIR, FRONTEND_ANALYSES_DIR
 from config.experiment import get_embedding_config, XAI_CONFIG, PRIMARY_METRIC
+from src.data_loader import load_dataset
+from src.embedding_store import EmbeddingStore
 from src.embeddings.factory import get_embedder
 from src.xai.llm_explainer_v2 import NaturalLanguageExplainer
 from src.xai.word_ablation_explainer import compute_contextual_ablation_keywords, resolve_guardrailed_verdict
@@ -124,6 +129,83 @@ async def get_config():
 
 class AnalyzeRequest(BaseModel):
     subject: str
+
+
+class SemanticRequest(BaseModel):
+    subject: str
+    status: str | None = None
+
+
+class FrontendAssetRequest(BaseModel):
+    analysis_id: str
+    scatter_png_base64: str | None = None
+    pdf_base64: str | None = None
+
+
+def _sanitize_slug(text: str, limit: int = 48) -> str:
+    cleaned = "".join(ch.lower() if ch.isalnum() else "-" for ch in str(text))
+    cleaned = "-".join(part for part in cleaned.split("-") if part)
+    return (cleaned or "analysis")[:limit].strip("-") or "analysis"
+
+
+def _create_frontend_analysis_dir(subject: str) -> tuple[str, Path]:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    analysis_id = f"{timestamp}_{_sanitize_slug(subject)}"
+    analysis_dir = FRONTEND_ANALYSES_DIR / analysis_id
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    return analysis_id, analysis_dir
+
+
+def _persist_frontend_analysis_artifacts(
+    analysis_id: str,
+    analysis_dir: Path,
+    result_data: dict,
+    log_lines: list[str],
+    run_id: str,
+) -> None:
+    payload = _to_jsonable(result_data)
+    semantic_map = payload.get("semantic_map")
+    metadata = {
+        "analysis_id": analysis_id,
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "run_id": run_id,
+        "embedding": _meta.get("embedding") if _meta else None,
+        "classifier": _meta.get("classifier") if _meta else None,
+        "status": payload.get("status"),
+        "confidence": payload.get("confidence"),
+        "subject": payload.get("subject"),
+        "artifacts": {
+            "result_json": "analysis_result.json",
+            "log_txt": "processing_log.txt",
+            "reasoning_txt": "reasoning.txt",
+            "keywords_json": "keywords.json",
+            "body_txt": "synthetic_email_body.txt",
+            "semantic_map_json": "semantic_map.json" if semantic_map else None,
+            "scatter_png": "semantic_scatter.png",
+            "report_pdf": "forensic_report.pdf",
+        },
+    }
+
+    (analysis_dir / "analysis_result.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (analysis_dir / "processing_log.txt").write_text("\n".join(log_lines).strip() + "\n", encoding="utf-8")
+    (analysis_dir / "reasoning.txt").write_text(str(payload.get("explanation") or ""), encoding="utf-8")
+    (analysis_dir / "keywords.json").write_text(
+        json.dumps(payload.get("keywords", []), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (analysis_dir / "synthetic_email_body.txt").write_text(str(payload.get("fake_body") or ""), encoding="utf-8")
+    if semantic_map:
+        (analysis_dir / "semantic_map.json").write_text(
+            json.dumps(semantic_map, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    (analysis_dir / "metadata.json").write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 # ----------------- MODEL LOADING -----------------
 def get_ranked_candidates():
@@ -252,9 +334,10 @@ def save_to_history(result_data):
             history = []
     
     import datetime
+    persisted = {k: v for k, v in result_data.items() if k != "semantic_map"}
     entry = {
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        **result_data
+        **persisted
     }
     history.insert(0, entry)
     history = history[:50] # Limit to 50
@@ -273,7 +356,8 @@ async def get_history():
         return []
 
 _FAKE_BODY_PLACEHOLDER = "No se generó reconstrucción de cuerpo."
-_POWERSAFE_CACHE_SCHEMA_VERSION = 3
+_POWERSAFE_CACHE_SCHEMA_VERSION = 4
+_semantic_cache = None
 
 def get_cached_result(subject: str, run_id: str):
     """Retrieves a cached analysis if it exists for the same subject and model.
@@ -314,7 +398,8 @@ def save_to_cache(result_data: dict, run_id: str):
     cache = [e for e in cache if not (e.get("subject", "").strip().lower() == subject_clean and e.get("run_id") == run_id)]
     
     # Add new entry with run_id
-    entry = {**result_data, "run_id": run_id, "cache_schema_version": _POWERSAFE_CACHE_SCHEMA_VERSION}
+    persisted = {k: v for k, v in result_data.items() if k != "semantic_map"}
+    entry = {**persisted, "run_id": run_id, "cache_schema_version": _POWERSAFE_CACHE_SCHEMA_VERSION}
     cache.insert(0, entry)
     cache = cache[:200]  # Limit cache size
     
@@ -323,6 +408,285 @@ def save_to_cache(result_data: dict, run_id: str):
             json.dump(cache, f, indent=2, ensure_ascii=False)
     except Exception as e:
         logger.error(f"Error saving cache: {e}")
+
+
+def _label_name(label_value: int) -> str:
+    return "phishing" if int(label_value) == 1 else "legitimate"
+
+
+def _truncate_text(text: str, limit: int = 160) -> str:
+    cleaned = str(text).strip()
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "…"
+
+
+def _normalize_rows(matrix: np.ndarray) -> np.ndarray:
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    norms = np.clip(norms, 1e-12, None)
+    return matrix / norms
+
+
+def _to_jsonable(value):
+    if isinstance(value, dict):
+        return {str(key): _to_jsonable(val) for key, val in value.items()}
+    if isinstance(value, list):
+        return [_to_jsonable(item) for item in value]
+    if isinstance(value, tuple):
+        return [_to_jsonable(item) for item in value]
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        return float(value)
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    return value
+
+
+def _load_run_manifest(run_id: str) -> dict:
+    manifest_path = RUNS_DIR / run_id / "run_manifest.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"No existe el manifiesto del run '{run_id}'.")
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _resolve_dataset_path(data_path_raw: str) -> Path:
+    candidate = Path(data_path_raw)
+    if candidate.exists():
+        return candidate
+
+    filename = candidate.name
+    local_candidate = DATA_DIR / filename
+    if local_candidate.exists():
+        logger.info(
+            "La ruta historica del dataset no existe en este entorno. Se reutilizara la copia local '%s'.",
+            local_candidate,
+        )
+        return local_candidate
+
+    matches = sorted(DATA_DIR.glob(f"*{filename}*"))
+    if matches:
+        logger.info(
+            "La ruta historica del dataset no existe en este entorno. Se reutilizara la coincidencia local '%s'.",
+            matches[0],
+        )
+        return matches[0]
+
+    raise FileNotFoundError(
+        f"No existe el dataset en {candidate}. Tampoco se encontro una copia local equivalente en '{DATA_DIR}'."
+    )
+
+
+def _prepare_semantic_cache() -> dict | None:
+    global _semantic_cache, _meta, _embedder
+    if not _meta or not _embedder:
+        logger.warning("No se puede preparar la cache semantica porque el modelo o el embedder no estan cargados.")
+        return None
+
+    run_id = _meta.get("run_id")
+    embedding_name = _meta.get("embedding")
+    if not run_id or not embedding_name:
+        logger.warning("No se puede preparar la cache semantica porque faltan run_id o embedding en _meta.")
+        return None
+
+    cache_key = (run_id, embedding_name)
+    if _semantic_cache and _semantic_cache.get("cache_key") == cache_key:
+        logger.info("Mapa semantico: reutilizando cache en memoria para run=%s embedding=%s.", run_id, embedding_name)
+        return _semantic_cache
+
+    logger.info("Mapa semantico: cargando manifiesto del run '%s'.", run_id)
+    manifest = _load_run_manifest(run_id)
+    data_path = _resolve_dataset_path(manifest["data_path"])
+    logger.info("Mapa semantico: dataset resuelto en '%s'.", data_path)
+    dataset = load_dataset(data_path)
+    dataset_fingerprint = manifest.get("dataset_fingerprint") or dataset.dataset_fingerprint
+    logger.info(
+        "Mapa semantico: dataset preparado con %s filas y fingerprint %s.",
+        dataset.size,
+        dataset_fingerprint,
+    )
+
+    store = EmbeddingStore(dataset_fingerprint)
+    embeddings = store.load(embedding_name)
+    if embeddings is None or len(embeddings) != dataset.size:
+        logger.info("No se encontro cache de embeddings reutilizable para el mapa semantico; se calcularan en vivo.")
+        embeddings = _embedder.encode(dataset.texts)
+        store.save(
+            embedding_name,
+            embeddings,
+            {
+                "dataset_fingerprint": dataset_fingerprint,
+                "dataset_size": dataset.size,
+                "embedding": embedding_name,
+            },
+        )
+    else:
+        logger.info(
+            "Mapa semantico: embeddings reutilizados desde cache con forma %s.",
+            tuple(np.asarray(embeddings).shape),
+        )
+
+    embeddings = np.asarray(embeddings, dtype=np.float32)
+    normalized_embeddings = _normalize_rows(embeddings)
+
+    logger.info("Mapa semantico: ajustando PCA 2D sobre embeddings con forma %s.", tuple(embeddings.shape))
+    pca = PCA(n_components=2, random_state=42)
+    coords = pca.fit_transform(embeddings)
+
+    labels = np.asarray(dataset.labels, dtype=int)
+    phishing_mask = labels == 1
+    legitimate_mask = labels == 0
+
+    centroid_phishing = embeddings[phishing_mask].mean(axis=0)
+    centroid_legitimate = embeddings[legitimate_mask].mean(axis=0)
+    centroid_coords = pca.transform(np.vstack([centroid_phishing, centroid_legitimate]))
+    centroid_norms = _normalize_rows(np.vstack([centroid_phishing, centroid_legitimate]))
+
+    _semantic_cache = {
+        "cache_key": cache_key,
+        "run_id": run_id,
+        "embedding": embedding_name,
+        "dataset_fingerprint": dataset_fingerprint,
+        "texts": dataset.texts,
+        "labels": labels,
+        "coords": coords.astype(np.float32),
+        "embeddings": embeddings,
+        "normalized_embeddings": normalized_embeddings.astype(np.float32),
+        "pca": pca,
+        "centroids": {
+            "phishing": centroid_phishing.astype(np.float32),
+            "legitimate": centroid_legitimate.astype(np.float32),
+        },
+        "centroid_norms": {
+            "phishing": centroid_norms[0].astype(np.float32),
+            "legitimate": centroid_norms[1].astype(np.float32),
+        },
+        "centroid_coords": {
+            "phishing": centroid_coords[0].astype(np.float32),
+            "legitimate": centroid_coords[1].astype(np.float32),
+        },
+    }
+    logger.info(
+        "Mapa semantico: cache lista para run=%s embedding=%s con %s puntos.",
+        run_id,
+        embedding_name,
+        len(dataset.texts),
+    )
+    return _semantic_cache
+
+
+def _build_semantic_payload(subject: str, subject_embedding: np.ndarray, is_phishing: bool) -> dict | None:
+    logger.info("Mapa semantico: iniciando payload para subject de longitud %s.", len(str(subject)))
+    semantic = _prepare_semantic_cache()
+    if not semantic:
+        logger.warning("Mapa semantico: no se pudo obtener la cache semantica base.")
+        return None
+
+    emb = np.asarray(subject_embedding, dtype=np.float32).reshape(1, -1)
+    emb_norm = _normalize_rows(emb)[0]
+    point_2d = semantic["pca"].transform(emb)[0]
+
+    similarities = semantic["normalized_embeddings"] @ emb_norm
+    distances = 1.0 - similarities
+
+    labels = semantic["labels"]
+    phishing_indices = np.where(labels == 1)[0]
+    legitimate_indices = np.where(labels == 0)[0]
+
+    nearest_phishing_index = int(phishing_indices[np.argmin(distances[phishing_indices])])
+    nearest_legitimate_index = int(legitimate_indices[np.argmin(distances[legitimate_indices])])
+
+    centroid_distance_phishing = float(1.0 - np.dot(semantic["centroid_norms"]["phishing"], emb_norm))
+    centroid_distance_legitimate = float(1.0 - np.dot(semantic["centroid_norms"]["legitimate"], emb_norm))
+
+    sorted_indices = np.argsort(distances)
+    max_neighbors = int(min(15, len(sorted_indices)))
+    ranked_indices = [int(idx) for idx in sorted_indices[:max_neighbors]]
+    neighbor_ranks = [-1] * len(distances)
+    for rank, idx in enumerate(ranked_indices, start=1):
+        neighbor_ranks[idx] = rank
+
+    phishing_neighbors = sum(labels[idx] == 1 for idx in ranked_indices[:5])
+    legitimate_neighbors = min(5, len(ranked_indices)) - phishing_neighbors
+    dominant_label = "phishing" if phishing_neighbors >= legitimate_neighbors else "legitimate"
+
+    interpretation = (
+        "El asunto analizado cae en un vecindario semántico dominado por ejemplos de phishing."
+        if dominant_label == "phishing"
+        else "El asunto analizado cae en un vecindario semántico dominado por ejemplos legítimos."
+    )
+
+    points = []
+    for idx, (coords, text, label) in enumerate(zip(semantic["coords"], semantic["texts"], labels)):
+        points.append(
+            {
+                "id": idx,
+                "x": round(float(coords[0]), 6),
+                "y": round(float(coords[1]), 6),
+                "subject_preview": _truncate_text(text, 180),
+                "label": _label_name(int(label)),
+                "similarity": round(float(similarities[idx]), 6),
+                "distance": round(float(distances[idx]), 6),
+                "neighbor_rank": neighbor_ranks[idx],
+            }
+        )
+
+    payload = {
+        "projection_method": "PCA",
+        "distance_metric": "cosine",
+        "note": "La posicion 2D proviene de PCA sobre embeddings reales. Las distancias y similitudes se calculan en el espacio semantico original del embedding.",
+        "points": points,
+        "analysis_point": {
+            "x": round(float(point_2d[0]), 6),
+            "y": round(float(point_2d[1]), 6),
+            "subject_preview": _truncate_text(subject, 180),
+            "predicted_label": "phishing" if is_phishing else "legitimate",
+        },
+        "centroids": {
+            "phishing": {
+                "x": round(float(semantic["centroid_coords"]["phishing"][0]), 6),
+                "y": round(float(semantic["centroid_coords"]["phishing"][1]), 6),
+            },
+            "legitimate": {
+                "x": round(float(semantic["centroid_coords"]["legitimate"][0]), 6),
+                "y": round(float(semantic["centroid_coords"]["legitimate"][1]), 6),
+            },
+        },
+        "nearest_by_class": {
+            "phishing": {
+                "index": nearest_phishing_index,
+                "distance": round(float(distances[nearest_phishing_index]), 6),
+                "similarity": round(float(similarities[nearest_phishing_index]), 6),
+            },
+            "legitimate": {
+                "index": nearest_legitimate_index,
+                "distance": round(float(distances[nearest_legitimate_index]), 6),
+                "similarity": round(float(similarities[nearest_legitimate_index]), 6),
+            },
+        },
+        "centroid_distances": {
+            "phishing": round(centroid_distance_phishing, 6),
+            "legitimate": round(centroid_distance_legitimate, 6),
+        },
+        "nearest_neighbor_indices": ranked_indices,
+        "default_neighbor_count": min(5, max_neighbors),
+        "max_neighbor_count": max_neighbors,
+        "neighbor_summary": {
+            "k": min(5, max_neighbors),
+            "phishing": phishing_neighbors,
+            "legitimate": legitimate_neighbors,
+            "dominant_label": dominant_label,
+        },
+        "interpretation": interpretation,
+    }
+    logger.info(
+        "Mapa semantico: payload construido con %s puntos, %s vecinos maximos y etiqueta dominante local '%s'.",
+        len(points),
+        max_neighbors,
+        dominant_label,
+    )
+    return payload
 
 # ----------------- INFERENCE ENDPOINT (STREAMING) -----------------
 @app.post("/api/analyze")
@@ -336,13 +700,58 @@ async def analyze_subject(req: AnalyzeRequest):
         raise HTTPException(status_code=400, detail="Subject is empty")
 
     async def event_generator():
+        log_lines: list[str] = []
+
+        def emit_log(content: str) -> str:
+            log_lines.append(content)
+            return json.dumps({"type": "log", "content": content}) + "\n"
+
         # --- CACHE CHECK ---
         run_id = _meta.get("run_id", "unknown")
         cached = get_cached_result(subject, run_id)
         if cached:
+            semantic_map = None
+            semantic_error = None
+            try:
+                yield json.dumps({"type": "log", "content": "Preparando mapa semántico interactivo con embeddings reales del dataset..."}) + "\n"
+                emb = await asyncio.to_thread(_embedder.encode, [subject])
+                semantic_map = await asyncio.to_thread(
+                    _build_semantic_payload,
+                    subject,
+                    emb[0],
+                    cached.get("status") == "phishing",
+                )
+                point_count = len(semantic_map.get("points", [])) if semantic_map else 0
+                yield json.dumps({"type": "log", "content": f"✅ Mapa semántico preparado correctamente ({point_count} puntos reales)."}) + "\n"
+                yield json.dumps({"type": "log", "content": "📦 Serializando payload semántico para enviarlo al navegador..."}) + "\n"
+            except Exception as exc:
+                semantic_error = f"{type(exc).__name__}: {exc}"
+                logger.warning("No se pudo reconstruir el mapa semantico desde cache: %s", exc)
+                yield json.dumps({"type": "log", "content": f"⚠️ No fue posible regenerar el mapa semántico interactivo para este resultado en caché. Detalle: {semantic_error}"}) + "\n"
             yield json.dumps({"type": "log", "content": "♻️ Resultados recuperados de la caché forense local."}) + "\n"
             yield json.dumps({"type": "log", "content": "✅ Análisis previo detectado: Restaurando interpretatibilidad..."}) + "\n"
-            yield json.dumps({"type": "result", "data": cached}) + "\n"
+            analysis_id, analysis_dir = _create_frontend_analysis_dir(subject)
+            result_payload = _to_jsonable({
+                **cached,
+                "semantic_map": semantic_map,
+                "semantic_error": semantic_error,
+                "analysis_id": analysis_id,
+                "artifact_dir": str(analysis_dir),
+            })
+            log_lines.extend([
+                "Resultados recuperados desde caché local del PowerToy.",
+                "Se reconstruyó el mapa semántico interactivo para esta recuperación." if semantic_map else "No fue posible reconstruir el mapa semántico interactivo durante la recuperación.",
+                "Se entregó la respuesta final al frontend.",
+            ])
+            _persist_frontend_analysis_artifacts(
+                analysis_id=analysis_id,
+                analysis_dir=analysis_dir,
+                result_data=result_payload,
+                log_lines=log_lines,
+                run_id=run_id,
+            )
+            yield json.dumps({"type": "log", "content": "📨 Entregando respuesta final al frontend..."}) + "\n"
+            yield json.dumps({"type": "result", "data": result_payload}) + "\n"
             return
             
         # 0. Check Model Status
@@ -403,24 +812,113 @@ async def analyze_subject(req: AnalyzeRequest):
         explanation = await asyncio.to_thread(llm_explainer.generate_explanation, subject, phishing_probability, lime_keywords)
         yield json.dumps({"type": "log", "content": "🎭 Generando cuerpo del mensaje en el idioma del asunto..."}) + "\n"
         fake_body = await asyncio.to_thread(llm_explainer.generate_email_body, subject, is_phishing)
+        semantic_map = None
+        semantic_error = None
+        try:
+            yield json.dumps({"type": "log", "content": "🗺️ Construyendo visualización semántica real del dataset para la vista interactiva..."}) + "\n"
+            semantic_map = await asyncio.to_thread(_build_semantic_payload, subject, emb[0], is_phishing)
+            point_count = len(semantic_map.get("points", [])) if semantic_map else 0
+            yield json.dumps({"type": "log", "content": f"✅ Mapa semántico preparado correctamente ({point_count} puntos reales)."}) + "\n"
+            yield json.dumps({"type": "log", "content": "📦 Serializando payload semántico para enviarlo al navegador..."}) + "\n"
+        except FileNotFoundError:
+            semantic_error = "FileNotFoundError: dataset fuente no disponible localmente"
+            logger.warning("No se pudo generar el mapa semantico porque el dataset fuente no esta disponible localmente.")
+            yield json.dumps({"type": "log", "content": f"⚠️ El dataset fuente no está disponible localmente; el mapa semántico interactivo se omitirá en esta ejecución. Detalle: {semantic_error}"}) + "\n"
+        except Exception as exc:
+            semantic_error = f"{type(exc).__name__}: {exc}"
+            logger.warning("No se pudo construir el mapa semantico: %s", exc)
+            yield json.dumps({"type": "log", "content": f"⚠️ No fue posible construir el mapa semántico interactivo con los datos reales de esta configuración. Detalle: {semantic_error}"}) + "\n"
 
+        analysis_id, analysis_dir = _create_frontend_analysis_dir(subject)
         final_data = {
             "status": "phishing" if is_phishing else "safe",
             "subject": subject,
             "confidence": round(confidence * 100, 1),
             "keywords": lime_keywords,
             "explanation": explanation,
-            "fake_body": fake_body
+            "fake_body": fake_body,
+            "semantic_map": semantic_map,
+            "semantic_error": semantic_error,
+            "analysis_id": analysis_id,
+            "artifact_dir": str(analysis_dir),
         }
+        log_lines.extend([
+            f"Veredicto final: {final_data['status']} con confianza {final_data['confidence']}%.",
+            f"Palabras relevantes detectadas: {len(lime_keywords)}.",
+            "Se generó el razonamiento maestro.",
+            "Se generó el cuerpo sintético del mensaje.",
+            "Se construyó el mapa semántico interactivo." if semantic_map else f"No se pudo construir el mapa semántico interactivo. Detalle: {semantic_error}",
+            "Se entregó la respuesta final al frontend.",
+        ])
+        _persist_frontend_analysis_artifacts(
+            analysis_id=analysis_id,
+            analysis_dir=analysis_dir,
+            result_data=final_data,
+            log_lines=log_lines,
+            run_id=run_id,
+        )
         
         # --- SAVE TO CACHE & HISTORY ---
         save_to_cache(final_data, run_id)
         save_to_history(final_data)
         
-        yield json.dumps({"type": "result", "data": final_data}) + "\n"
+        yield json.dumps({"type": "log", "content": "📨 Entregando respuesta final al frontend..."}) + "\n"
+        yield json.dumps({"type": "result", "data": _to_jsonable(final_data)}) + "\n"
         yield json.dumps({"type": "log", "content": "💾 Análisis finalizado y guardado exitosamente en la caché forense."}) + "\n"
 
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
+
+
+@app.post("/api/semantic-map")
+async def get_semantic_map(req: SemanticRequest):
+    global _embedder
+    if not _embedder:
+        raise HTTPException(status_code=500, detail="Embedder not loaded")
+
+    subject = req.subject.strip()
+    if not subject:
+        raise HTTPException(status_code=400, detail="Subject is empty")
+
+    try:
+        emb = await asyncio.to_thread(_embedder.encode, [subject])
+        semantic_map = await asyncio.to_thread(
+            _build_semantic_payload,
+            subject,
+            emb[0],
+            req.status == "phishing",
+        )
+        return {
+            "semantic_map": _to_jsonable(semantic_map),
+            "semantic_error": None,
+        }
+    except Exception as exc:
+        semantic_error = f"{type(exc).__name__}: {exc}"
+        logger.warning("No se pudo construir el mapa semantico on-demand: %s", exc)
+        return {
+            "semantic_map": None,
+            "semantic_error": semantic_error,
+        }
+
+
+@app.post("/api/frontend-analysis-assets")
+async def save_frontend_analysis_assets(req: FrontendAssetRequest):
+    analysis_dir = FRONTEND_ANALYSES_DIR / req.analysis_id
+    if not analysis_dir.exists():
+        raise HTTPException(status_code=404, detail="Analysis artifact directory not found")
+
+    saved = []
+
+    if req.scatter_png_base64:
+        scatter_payload = req.scatter_png_base64.split(",", 1)[-1]
+        (analysis_dir / "semantic_scatter.png").write_bytes(base64.b64decode(scatter_payload))
+        saved.append("semantic_scatter.png")
+
+    if req.pdf_base64:
+        pdf_payload = req.pdf_base64.split(",", 1)[-1]
+        (analysis_dir / "forensic_report.pdf").write_bytes(base64.b64decode(pdf_payload))
+        saved.append("forensic_report.pdf")
+
+    return {"saved": saved}
 
 # Serve Frontend
 static_dir = Path(__file__).resolve().parent / "static"

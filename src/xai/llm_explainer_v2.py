@@ -14,6 +14,13 @@ from config.paths import PROJECT_ROOT, SECRETS_DIR
 logger = logging.getLogger("phishing_xai.llm_explainer")
 
 try:
+    from langdetect import DetectorFactory, LangDetectException, detect
+    DetectorFactory.seed = 42
+except ImportError:
+    detect = None
+    LangDetectException = Exception
+
+try:
     from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 except ImportError:
     logger.warning("'tenacity' no esta instalado. El sistema funcionara sin reintentos automaticos.")
@@ -32,6 +39,46 @@ except ImportError:
 
 
 class NaturalLanguageExplainer:
+    LANGUAGE_NAMES = {
+        "es": "Spanish",
+        "en": "English",
+        "fr": "French",
+        "de": "German",
+        "it": "Italian",
+        "pt": "Portuguese",
+        "ca": "Catalan",
+        "nl": "Dutch",
+        "ro": "Romanian",
+        "pl": "Polish",
+        "sv": "Swedish",
+        "no": "Norwegian",
+        "da": "Danish",
+        "fi": "Finnish",
+        "tr": "Turkish",
+        "cs": "Czech",
+        "sk": "Slovak",
+        "hu": "Hungarian",
+        "ru": "Russian",
+        "uk": "Ukrainian",
+        "bg": "Bulgarian",
+        "el": "Greek",
+        "ar": "Arabic",
+        "he": "Hebrew",
+        "hi": "Hindi",
+        "bn": "Bengali",
+        "ur": "Urdu",
+        "fa": "Persian",
+        "zh-cn": "Simplified Chinese",
+        "zh-tw": "Traditional Chinese",
+        "zh": "Chinese",
+        "ja": "Japanese",
+        "ko": "Korean",
+        "vi": "Vietnamese",
+        "id": "Indonesian",
+        "ms": "Malay",
+        "th": "Thai",
+    }
+
     def __init__(self, base_path: Optional[Path] = None):
         self.base_path = Path(base_path or PROJECT_ROOT)
         self.secrets_dir = Path(os.environ.get("XAI_SECRETS_DIR", SECRETS_DIR))
@@ -155,6 +202,99 @@ class NaturalLanguageExplainer:
             "If the subject looks legitimate, make the body sound professional and normal. "
             "If the subject looks like phishing, make the body persuasive and plausible. "
             "Do not include headers or explanations. Return only the body."
+        )
+
+    def _detect_language(self, text: str) -> str:
+        normalized = (text or "").strip()
+        if not normalized:
+            return "es"
+
+        if detect is not None:
+            try:
+                detected = detect(normalized)
+                if detected:
+                    return detected.lower()
+            except LangDetectException:
+                logger.warning("No se pudo detectar automaticamente el idioma; se aplicara respaldo heuristico.")
+            except Exception as exc:
+                logger.warning("Fallo inesperado al detectar idioma: %s", exc)
+
+        lowered = normalized.lower()
+        tokens = re.findall(r"[a-z]+", lowered, flags=re.IGNORECASE)
+        if not tokens:
+            return "es"
+
+        spanish_markers = {
+            "el", "la", "de", "para", "con", "hola", "cuenta", "solicitud",
+            "aprobacion", "seguridad", "urgente", "banco",
+            "correo", "verificar", "estimado", "usted", "adjunto",
+        }
+        english_markers = {
+            "the", "your", "please", "account", "request", "approval",
+            "security", "verify", "workday", "outstanding", "urgent",
+            "read", "immediately", "immediatly", "will", "regret", "mr",
+            "hello", "click", "review",
+        }
+
+        spanish_score = sum(token in spanish_markers for token in tokens)
+        english_score = sum(token in english_markers for token in tokens)
+
+        padded = f" {lowered} "
+        spanish_score += 2 * sum(
+            fragment in padded
+            for fragment in (" por favor ", " haga clic ", " estimado ", " le escribimos ", " su cuenta ")
+        )
+        english_score += 2 * sum(
+            fragment in padded
+            for fragment in (" please ", " click here ", " your account ", " read this ", " you will ")
+        )
+
+        if " por favor " in padded or " estimado " in padded:
+            spanish_score += 1
+        if re.search(r"\b(mr|mrs|dear|hello|urgent|read|will)\b", lowered):
+            english_score += 1
+
+        return "en" if english_score > spanish_score else "es"
+
+    def _build_explanation_prompt(self, subject: str, phishing_probability: float, features: list[dict]) -> str:
+        verdict = "phishing" if phishing_probability >= 0.5 else "legitimate"
+
+        if features:
+            feature_lines = "\n".join(
+                f'- "{f["word"]}": {f["impact"]}% | {"sube riesgo de phishing" if f.get("positive", True) else "reduce riesgo y favorece legitimidad"}'
+                for f in features
+            )
+        else:
+            feature_lines = "- No se pudieron aislar palabras individuales."
+
+        return (
+            "Eres un analista forense de inteligencia artificial explicable.\n"
+            "Responde estrictamente en espanol, incluso si el asunto original esta en otro idioma.\n\n"
+            f"Asunto analizado: \"{subject}\"\n"
+            f"Veredicto del modelo: {verdict}\n"
+            f"Probabilidad de phishing: {phishing_probability*100:.1f}%\n"
+            f"Atribuciones por palabra:\n{feature_lines}\n\n"
+            "Redacta 4 o 5 oraciones corridas, sin vietas ni markdown. "
+            "Menciona explicitamente las palabras mas importantes y sus porcentajes. "
+            "Si el correo parece legitimo, explica por que las palabras reducen el riesgo. "
+            "Si parece phishing, explica por que las palabras aumentan el riesgo. "
+            "Termina con una recomendacion concreta para la persona usuaria."
+        )
+
+    def _build_body_prompt(self, subject: str, is_phishing: bool) -> str:
+        language = self._detect_language(subject)
+        message_type = "phishing" if is_phishing else "legitimate"
+        language_name = self.LANGUAGE_NAMES.get(language, language.upper())
+
+        return (
+            "You are generating a synthetic email body for controlled security research.\n"
+            f"Write only in {language_name}. The output language must match the subject language exactly.\n"
+            f"Subject: '{subject}'\n"
+            f"Requested style: {message_type}\n"
+            "Return only one short paragraph for the body of the email. "
+            "Do not include the subject line, greeting metadata, headers, signatures, bullets, or explanations. "
+            "If the subject appears legitimate, make the body sound professional and normal. "
+            "If the subject appears phishing, make the body sound manipulative but plausible."
         )
 
     @retry(
