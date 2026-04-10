@@ -36,15 +36,4 @@ secrets/
 *.bck
 
 # Experiment artifacts and model caches
-results/cache/
-results/checkpoints/
-results/logs/
-results/temp/
-results/runs/
-results/powertoy_cache.json
-results/powertoy_history.json
-
-# Keep lightweight summary tables if desired
-!results/
-!results/tables/
-!results/tables/*.csv
+results/
