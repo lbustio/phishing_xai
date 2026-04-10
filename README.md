@@ -262,7 +262,7 @@ This repository is suitable for:
 
 - controlled experimentation
 - comparative benchmarking across embeddings and classifiers
-- production of artifacts for reporting and later paper writing
+- production of artifacts for analysis, inspection, and reporting
 - forensic inspection of model behavior on short subjects
 
 This repository is not, in its current state, a drop-in production phishing defense system.
