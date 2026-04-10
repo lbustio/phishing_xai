@@ -104,13 +104,13 @@ That means a fresh clone gives you the expected directory structure, but not the
 
 ## 5. Dataset Handling
 
-The default dataset path is:
+The default dataset path used in examples is:
 
 ```text
-data/pop_dataset_Full(Tiltan).csv
+data/dataset.csv
 ```
 
-This file is not shipped with the repository. Collaborators must place the dataset locally.
+This file is not shipped with the repository. Collaborators must place a local dataset in `data/` and may either name it `dataset.csv` or pass its real path explicitly with `--data`.
 
 ### 5.1 Required Dataset Shape
 
@@ -184,6 +184,32 @@ The current project uses secrets in two distinct ways:
 
 - Hugging Face tokens for gated model access and some explanation flows
 - Groq token for the natural-language explanation layer in the demo flow
+
+### 6.0 Groq API Key Details
+
+The demo explanation layer currently expects a Groq API key when natural-language reasoning and synthetic email-body generation are enabled.
+
+Minimal setup:
+
+```text
+secrets/groq.txt
+```
+
+Contents:
+
+```text
+your_groq_api_key_here
+```
+
+The runtime reads that file and uses the token as the `api_key` for the Groq client used by the explanation layer.
+
+Operational implications:
+
+- if `secrets/groq.txt` exists and contains a valid key, the demo can request the natural-language reasoning and synthetic body generation layer through Groq
+- if the file is missing, empty, or invalid, the explanation layer may fall back to reduced behavior or fail, depending on the code path being exercised
+- this key should never be committed to Git
+
+If you prefer an environment-variable workflow in your shell session, keep the file-based contract as the repository default and generate or synchronize `secrets/groq.txt` locally before running the demo. The current implementation is documented around the local secrets directory, not around a required `GROQ_API_KEY` environment variable.
 
 Language handling in the current demo is implemented explicitly:
 
@@ -335,33 +361,33 @@ This can be computationally expensive, especially when large embeddings are enab
 
 ### 8.1 Embedding List
 
-- `distilbert-base-uncased`
-- `sentence-transformers/all-mpnet-base-v2`
-- `hkunlp/instructor-large`
-- `intfloat/e5-mistral-7b-instruct`
-- `Salesforce/SFR-Embedding-Mistral`
-- `BAAI/bge-m3`
-- `intfloat/e5-large-v2`
-- `Alibaba-NLP/gte-Qwen2-7B-instruct`
-- `jinaai/jina-embeddings-v3`
-- `meta-llama/Meta-Llama-3.1-8B-Instruct`
-- `BAAI/bge-large-en-v1.5`
-- `thenlper/gte-large`
-- `Salesforce/SFR-Embedding-2_R`
+- `distilbert-base-uncased`: low-cost generic Transformer baseline.
+- `sentence-transformers/all-mpnet-base-v2`: strong general-purpose contrastive sentence baseline.
+- `hkunlp/instructor-large`: task-aware instruction encoder without fine-tuning.
+- `intfloat/e5-mistral-7b-instruct`: large instruction-tuned embedding model for LLM-scale robustness testing.
+- `Salesforce/SFR-Embedding-Mistral`: strong industrial instruction-tuned baseline.
+- `BAAI/bge-m3`: multilingual multi-granular contrastive model for heterogeneous short text.
+- `intfloat/e5-large-v2`: robust contrastive baseline for query-like inputs.
+- `Alibaba-NLP/gte-Qwen2-7B-instruct`: frontier 7B instruction-tuned representation model.
+- `jinaai/jina-embeddings-v3`: practical modern multitask sentence embedding candidate.
+- `meta-llama/Meta-Llama-3.1-8B-Instruct`: general-purpose LLM reused as a feature extractor.
+- `BAAI/bge-large-en-v1.5`: English-focused contrastive comparison point.
+- `thenlper/gte-large`: mid-sized contrastive model for quality-efficiency comparison.
+- `Salesforce/SFR-Embedding-2_R`: second-generation SFR model for within-family comparison.
 
 ### 8.2 Classifier List
 
-- `logistic_regression`
-- `linear_svc`
-- `svm_rbf`
-- `sgd_classifier`
-- `random_forest`
-- `extra_trees`
-- `mlp`
-- `knn`
-- `decision_tree`
-- `gaussian_nb`
-- `lda`
+- `logistic_regression`: mandatory linear dense-embedding baseline.
+- `linear_svc`: classic linear maximum-margin text-classification reference.
+- `svm_rbf`: non-linear kernel model for curved decision boundaries.
+- `sgd_classifier`: scalable stochastic linear baseline.
+- `random_forest`: standard tree-ensemble non-linear baseline.
+- `extra_trees`: randomized tree-ensemble comparison point.
+- `mlp`: shallow neural baseline over embeddings.
+- `knn`: geometric neighborhood baseline in embedding space.
+- `decision_tree`: directly interpretable rule-based baseline.
+- `gaussian_nb`: simple probabilistic baseline for continuous embeddings.
+- `lda`: linear probabilistic midpoint between simple linear and stronger distributional models.
 
 ## 9. Outputs and Artifacts
 

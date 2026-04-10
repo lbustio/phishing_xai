@@ -1,0 +1,8 @@
+{
+  "run_id": "20260328_031334",
+  "embedding": "distilbert-base-uncased",
+  "classifier": "svm_rbf",
+  "model_path": "model.joblib",
+  "model_metadata_path": "model_metadata.json",
+  "run_manifest_path": "run_manifest.json"
+}

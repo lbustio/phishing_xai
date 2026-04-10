@@ -41,3 +41,11 @@ results/
 # Non-distributable datasets
 data/*
 !data/.gitkeep
+
+# Deploy bundle artifacts for public demo packaging
+deploy/bundle/*
+!deploy/bundle/.gitkeep
+!deploy/bundle/deploy_bundle.json
+!deploy/bundle/model.joblib
+!deploy/bundle/model_metadata.json
+!deploy/bundle/run_manifest.json

@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+numpy
+joblib
+scikit-learn
+requests
+torch
+transformers
+sentence-transformers
+huggingface_hub
+accelerate
+langdetect

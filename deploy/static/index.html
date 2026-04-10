@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing XAI Demo</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="shell">
+        <section class="hero card">
+            <p class="eyebrow">Public Demo</p>
+            <h1>Phishing XAI Demo</h1>
+            <p class="lede">
+                Simplified web deployment for free hosting. This version keeps one trained model,
+                word-level attribution, Spanish reasoning, and a synthetic message body.
+            </p>
+            <p id="runtimeConfig" class="runtime">Loading deploy configuration...</p>
+        </section>
+
+        <section class="card">
+            <label for="subjectInput" class="label">Email subject</label>
+            <div class="input-row">
+                <input id="subjectInput" type="text" placeholder="Example: URGENT: Verify your account immediately">
+                <button id="analyzeBtn" type="button">Analyze</button>
+            </div>
+            <p class="note">
+                This public demo intentionally omits the dataset-dependent semantic scatter and other heavyweight features from the full local PowerToy.
+            </p>
+        </section>
+
+        <section id="resultCard" class="card hidden">
+            <div class="result-header">
+                <div>
+                    <p class="eyebrow">Verdict</p>
+                    <h2 id="verdictTitle">Analyzing...</h2>
+                </div>
+                <div id="confidenceBadge" class="badge">0%</div>
+            </div>
+
+            <div class="grid">
+                <article class="panel">
+                    <h3>Reasoning</h3>
+                    <p id="explanationText">Waiting...</p>
+                </article>
+                <article class="panel">
+                    <h3>Synthetic message body</h3>
+                    <p id="bodyText">Waiting...</p>
+                </article>
+            </div>
+
+            <article class="panel">
+                <h3>Leave-one-out keywords</h3>
+                <div id="keywordChips" class="chips"></div>
+            </article>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

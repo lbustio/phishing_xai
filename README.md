@@ -1,5 +1,17 @@
 # phishing_xai
 
+<p align="center">
+  <img src="demo_app/static/logo-corporate.svg" alt="phishing_xai logo" width="220">
+</p>
+
+<p align="center">
+  <img src="demo_app/static/logo-shield.svg" alt="phishing shield icon" width="72">
+</p>
+
+<p align="center">
+  Experimental framework for explainable phishing detection on short email subjects.
+</p>
+
 Explainable phishing detection pipeline for short email subjects.
 
 This repository implements an experimental framework that compares multiple text embedding models and multiple classical classifiers for binary phishing detection using subject lines only. It is designed for reproducible experimentation, careful model comparison, and post hoc explanation of the selected model.
@@ -46,19 +58,19 @@ The active configuration is defined in [`config/experiment.py`](config/experimen
 
 The current embedding set includes:
 
-- `distilbert-base-uncased`
-- `sentence-transformers/all-mpnet-base-v2`
-- `hkunlp/instructor-large`
-- `intfloat/e5-mistral-7b-instruct`
-- `Salesforce/SFR-Embedding-Mistral`
-- `BAAI/bge-m3`
-- `intfloat/e5-large-v2`
-- `Alibaba-NLP/gte-Qwen2-7B-instruct`
-- `jinaai/jina-embeddings-v3`
-- `meta-llama/Meta-Llama-3.1-8B-Instruct`
-- `BAAI/bge-large-en-v1.5`
-- `thenlper/gte-large`
-- `Salesforce/SFR-Embedding-2_R`
+- `distilbert-base-uncased`: low-cost BERT-derived baseline used to test whether a generic lightweight encoder is already sufficient for short subjects.
+- `sentence-transformers/all-mpnet-base-v2`: strong general-purpose contrastive baseline for short-text semantics.
+- `hkunlp/instructor-large`: instruction-aware encoder included to test whether task-aware prompting helps without fine-tuning.
+- `intfloat/e5-mistral-7b-instruct`: large instruction-tuned embedding model used to test LLM-scale robustness on adversarial short text.
+- `Salesforce/SFR-Embedding-Mistral`: industrial instruction-tuned baseline included as a strong enterprise-grade representation model.
+- `BAAI/bge-m3`: multilingual and multi-granular contrastive model chosen for robustness on heterogeneous short inputs.
+- `intfloat/e5-large-v2`: well-established contrastive baseline for query-like short texts.
+- `Alibaba-NLP/gte-Qwen2-7B-instruct`: frontier 7B instruction-tuned embedding model included to test whether newer large-scale representations add measurable gains.
+- `jinaai/jina-embeddings-v3`: modern multitask sentence embedding model included as a practical high-performing candidate.
+- `meta-llama/Meta-Llama-3.1-8B-Instruct`: general-purpose instruction-tuned LLM reused as a feature extractor to test transferability.
+- `BAAI/bge-large-en-v1.5`: English-focused contrastive encoder included to compare English-only strength against multilingual alternatives.
+- `thenlper/gte-large`: mid-sized contrastive model included to study the quality-efficiency trade-off.
+- `Salesforce/SFR-Embedding-2_R`: second-generation SFR model included to measure within-family improvement under the same evaluation protocol.
 
 These embeddings span three broad families:
 
@@ -72,17 +84,17 @@ Some large models are marked `skip_on_cpu=True` in the configuration. That means
 
 The active classifier set is:
 
-- `logistic_regression`
-- `linear_svc`
-- `svm_rbf`
-- `sgd_classifier`
-- `random_forest`
-- `extra_trees`
-- `mlp`
-- `knn`
-- `decision_tree`
-- `gaussian_nb`
-- `lda`
+- `logistic_regression`: mandatory linear baseline for dense embeddings; fast, interpretable, and a strong default reference.
+- `linear_svc`: linear maximum-margin baseline included because linear SVMs remain a classic strong text-classification reference.
+- `svm_rbf`: non-linear kernel model used to test whether embedding-space separation is curved rather than linear.
+- `sgd_classifier`: scalable stochastic linear baseline included as a fast and methodologically solid reference.
+- `random_forest`: tree ensemble baseline for non-linear separability in dense embedding spaces.
+- `extra_trees`: randomized tree ensemble included to compare against random forests with a different bias-variance profile.
+- `mlp`: shallow neural classifier included to test whether a modest learned non-linear projection improves discrimination.
+- `knn`: neighborhood-based baseline used to test whether phishing and legitimate subjects form coherent local regions in embedding space.
+- `decision_tree`: directly interpretable tree baseline included to complement post hoc explanations with a native rule-based model.
+- `gaussian_nb`: simple probabilistic baseline for dense continuous embeddings, useful as a fast reference even if not expected to win.
+- `lda`: linear probabilistic classifier included as a midpoint between simple linear models and stronger distributional assumptions.
 
 This set was chosen to cover a range of modeling assumptions:
 
@@ -270,13 +282,13 @@ More detailed operational guidance is in [`docs/README_TECHNICAL.md`](docs/READM
 
 ## Inputs and Assumptions
 
-The default dataset path is:
+The default dataset path used in the repository examples is:
 
 ```text
-data/pop_dataset_Full(Tiltan).csv
+data/dataset.csv
 ```
 
-That file is not distributed through the repository. The directory is kept so collaborators can place local datasets there without changing project structure.
+The repository does not distribute any dataset file. The `data/` directory is kept so collaborators can place a local dataset there without changing project structure. Any documentation reference to `data/dataset.csv` should be read as a placeholder path, not as the name of a distributed dataset.
 
 The loader expects:
 

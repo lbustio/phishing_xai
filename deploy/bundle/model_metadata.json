@@ -1,0 +1,27 @@
+{
+  "embedding": "distilbert-base-uncased",
+  "classifier": "svm_rbf",
+  "metrics": {
+    "f1_macro": 0.9478226395981888,
+    "f1_macro_std": 0.006628078690984701,
+    "f1_weighted": 0.9479104003015927,
+    "f1_weighted_std": 0.0066225342689528385,
+    "accuracy": 0.9479245412294024,
+    "accuracy_std": 0.0066319032039926585,
+    "precision_macro": 0.9481921865675208,
+    "precision_macro_std": 0.006829229559319363,
+    "recall_macro": 0.9476510111833104,
+    "recall_macro_std": 0.006440888847374659,
+    "roc_auc": 0.9867765014975554,
+    "roc_auc_std": 0.0019608064434534955
+  },
+  "selected_params_full_refit": {
+    "C": 10.0,
+    "class_weight": null,
+    "gamma": "scale"
+  },
+  "selected_params_frequency_in_outer_folds": {
+    "{\"C\": 10.0, \"class_weight\": null, \"gamma\": \"scale\"}": 5
+  },
+  "generated_at": "2026-03-28T03:17:00"
+}
