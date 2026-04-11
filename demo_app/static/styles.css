@@ -315,7 +315,7 @@ button:hover {
 /* Results Section */
 .results-section {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 2rem;
     animation: slideUp 0.5s ease;
 }
@@ -443,14 +443,47 @@ button:hover {
 }
 
 .semantic-panel {
-    grid-column: 1 / -1;
     display: flex;
     flex-direction: column;
-    gap: 1.4rem;
+    gap: 1.2rem;
     border-color: rgba(59, 130, 246, 0.26);
     background:
         linear-gradient(180deg, rgba(10, 18, 31, 0.92), rgba(7, 13, 26, 0.88)),
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 55%);
+}
+
+
+.semantic-metrics-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.9rem;
+    margin-top: 0.8rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.smetric-item {
+    background: rgba(7, 12, 24, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+}
+
+.smetric-label {
+    display: block;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: rgba(191, 219, 254, 0.78);
+    margin-bottom: 0.45rem;
+    font-weight: 600;
+}
+
+.smetric-value {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
 }
 
 .semantic-header {
@@ -540,7 +573,7 @@ button:hover {
 }
 
 .semantic-plot {
-    min-height: 520px;
+    min-height: 620px;
     width: 100%;
     border-radius: 18px;
     overflow: hidden;
@@ -602,12 +635,14 @@ button:hover {
 }
 
 /* Email Mockup */
+.email-panel {
+}
+
 .email-mockup {
     background: #ffffff;
     color: #1f2937;
     border-radius: 8px;
     overflow: hidden;
-    height: 100%;
 }
 
 .email-header {
@@ -654,7 +689,7 @@ button:hover {
 }
 
 @media (max-width: 850px) {
-    .results-section { grid-template-columns: 1fr; }
+    .semantic-metrics-strip { grid-template-columns: 1fr 1fr; }
     .semantic-body { grid-template-columns: 1fr; }
     .semantic-header {
         flex-direction: column;
@@ -789,12 +824,23 @@ button:hover {
     font-weight: bold;
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
+.chip-safe .impact-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.3);
+}
 
 .high-impact {
     background: rgba(239, 68, 68, 0.4);
     border-color: rgba(239, 68, 68, 0.6);
     color: #fff;
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+.chip-safe .high-impact {
+    background: rgba(16, 185, 129, 0.4);
+    border-color: rgba(16, 185, 129, 0.6);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
 }
 
 @keyframes fadeIn {
@@ -1048,6 +1094,66 @@ button:hover {
     letter-spacing: 0.5px;
 }
 
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.clear-history-btn {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: rgba(239, 68, 68, 0.75);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 0.3rem 0.65rem;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.clear-history-btn:hover {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.7);
+    color: #ef4444;
+}
+
+.sidebar-footer {
+    flex-shrink: 0;
+    padding: 1rem 1.5rem 1.4rem;
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: center;
+}
+
+.clear-history-btn-footer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.6rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    border-radius: 8px;
+    border-width: 1px;
+    gap: 0.1rem;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.clear-history-btn-footer:hover {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.7);
+    color: #ef4444;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.15);
+    transform: none;
+}
+
+.clear-history-btn-footer:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
 .close-btn {
     background: transparent;
     border: none;
@@ -1082,8 +1188,54 @@ button:hover {
 .history-card .card-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: 0.5rem;
     font-size: 0.8rem;
+}
+
+.history-card .card-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0);
+    color: rgba(239, 68, 68, 0);
+    border-radius: 5px;
+    padding: 0.22rem 0.32rem;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, border-color 0.18s, opacity 0.18s;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.history-card:hover .card-delete-btn {
+    color: rgba(239, 68, 68, 0.7);
+    border-color: rgba(239, 68, 68, 0.3);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.card-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: rgba(239, 68, 68, 0.65) !important;
+    color: #ef4444 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.card-delete-btn:disabled {
+    opacity: 0.4;
+    cursor: wait;
+    pointer-events: none;
 }
 
 .history-card .card-status {

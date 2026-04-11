@@ -29,13 +29,17 @@ The declared dependencies include:
 - `numpy`
 - `pandas`
 - `scikit-learn`
+- `scipy`
 - `matplotlib`
 - `joblib`
 - `psutil`
 - `pytorch`
+- `numba` (required by SHAP for JIT compilation)
 - `shap`
 - `fastapi`
-- `uvicorn`
+- `uvicorn[standard]`
+- `pydantic`
+- `requests`
 - `transformers`
 - `sentence-transformers`
 - `huggingface_hub`
@@ -43,6 +47,7 @@ The declared dependencies include:
 - `lime`
 - `langdetect`
 - `groq`
+- `tenacity`
 - `jinja2`
 
 The current environment file also defines:
@@ -465,7 +470,7 @@ The demo:
 - loads the corresponding embedding model and classifier
 - computes phishing probability for a user-supplied subject
 - computes leave-one-out keyword attribution
-- generates a natural-language explanation
+- generates a natural-language explanation via a three-level LLM engine (Groq → HuggingFace Router → local Qwen)
 - generates a synthetic email body in the detected language of the subject
 - reconstructs a semantic map from the real dataset and real embeddings of the selected run
 - projects the semantic space to 2D with PCA for interactive visualization
@@ -476,6 +481,10 @@ The demo:
 - can export a PDF that includes the semantic reading and the scatter snapshot when available
 - stores local demo cache and local history files
 - stores per-analysis frontend artifacts under `results/frontend_analyses/`
+- provides a history sidebar with:
+  - a per-card delete button (trash icon, revealed on hover) calling `DELETE /api/history/{index}`
+  - a **Borrar todo** button fixed at the bottom of the sidebar calling `DELETE /api/history`
+  - full forensic detail modal on card click
 
 ### 10.4 Demo Semantics and Interaction
 
@@ -492,6 +501,16 @@ Important interpretation rule:
 - the reported similarity and distance values are computed in the original embedding space with cosine similarity / cosine distance
 
 The browser-side chart is rendered with Plotly loaded from a CDN at runtime. It is not a Python dependency in `environment.yml`.
+
+### 10.4.1 LLM Explanation Engine
+
+The natural-language reasoning layer uses a three-level fallback chain:
+
+1. **Groq** (`llama-3.3-70b-versatile`): primary engine. Active when `secrets/groq.txt` contains a valid key.
+2. **HuggingFace Router** (`meta-llama/Llama-3.1-8B-Instruct`): secondary engine. Active when `secrets/huggingface.txt` is available and Groq is not.
+3. **Local Qwen** (`Qwen/Qwen2.5-1.5B-Instruct`): offline fallback loaded via `transformers.pipeline`. No API key required.
+
+All three engines apply `tenacity`-based exponential-backoff retry logic on transient failures.
 
 ## 10.5 Lightweight Public Deploy
 

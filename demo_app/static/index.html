@@ -73,43 +73,7 @@
 
         <!-- Results Area -->
         <section id="resultsSection" class="results-section hidden">
-            <!-- Master Reasoning (Synthesized XAI) -->
-            <div id="masterReasoningPanel" class="master-reasoning glass-panel hidden">
-                <div class="master-header">
-                    <div class="ai-brain-icon">🧠</div>
-                    <div class="master-title">
-                        <h3>Razonamiento Maestro XAI</h3>
-                        <p>Síntesis Integral del Análisis Forense</p>
-                    </div>
-                </div>
-                <div id="masterExplanation" class="master-explanation-text">
-                    Iniciando síntesis de datos científicos...
-                </div>
-            </div>
-
-            <!-- Left: XAI Explainability -->
-            <div class="xai-panel glass-panel danger-theme" id="xaiPanel">
-                <div class="threat-header">
-                    <div class="threat-level" id="threatIcon">⚠️</div>
-                    <div class="threat-info">
-                        <h3 id="threatTitle">Alto Riesgo: Phishing Detectado</h3>
-                        <span id="threatConfidence" class="confidence-badge">Certeza: 98%</span>
-                    </div>
-                </div>
-                
-                <div class="explanation-box">
-                    <h4>Diagnóstico XAI (Traducción Natural):</h4>
-                    <p id="naturalExplanation">Cargando...</p>
-                    <div id="semanticReasoningText" class="semantic-reasoning-note hidden"></div>
-                </div>
-
-                <div class="keywords-box" id="keywordsBox">
-                    <h4>Desencadenantes Algorítmicos Detectados (Leave-One-Out):</h4>
-                    <div class="chips" id="keywordChips"></div>
-                </div>
-            </div>
-
-            <!-- Right: Forensic Attack Evidence -->
+            <!-- Arriba: Cuerpo del mensaje generado (ancho completo) -->
             <div class="email-panel glass-panel">
                 <div class="email-mockup">
                     <div class="email-header">
@@ -129,6 +93,7 @@
                 </div>
             </div>
 
+            <!-- Centro: Mapa Semántico (ancho completo) -->
             <div id="semanticPanel" class="semantic-panel glass-panel hidden">
                 <div class="semantic-header">
                     <div>
@@ -144,38 +109,48 @@
                         <button id="semanticModeBtn" class="semantic-mode-btn" type="button">Mostrar solo vecinos</button>
                     </div>
                 </div>
+                <div id="semanticPlot" class="semantic-plot" aria-label="Mapa semántico interactivo"></div>
+                <p id="semanticNote" class="semantic-note"></p>
+            </div>
 
-                <div class="semantic-body">
-                    <div class="semantic-canvas-shell">
-                        <div id="semanticPlot" class="semantic-plot" aria-label="Mapa semántico interactivo"></div>
-                        <p id="semanticNote" class="semantic-note"></p>
+            <!-- Abajo: Razonamiento completo con métricas semánticas -->
+            <div class="xai-panel glass-panel danger-theme" id="xaiPanel">
+                <div class="threat-header">
+                    <div class="threat-level" id="threatIcon">⚠️</div>
+                    <div class="threat-info">
+                        <h3 id="threatTitle">Alto Riesgo: Phishing Detectado</h3>
+                        <span id="threatConfidence" class="confidence-badge">Certeza: 98%</span>
                     </div>
-                    <aside class="semantic-sidebar">
-                        <div class="semantic-metric-card">
-                            <h4>Vecindad local</h4>
-                            <p id="semanticNeighborSummary">Sin datos.</p>
-                        </div>
-                        <div class="semantic-metric-card">
-                            <h4>Punto phishing más cercano</h4>
-                            <p id="nearestPhishingMetric">Sin datos.</p>
-                        </div>
-                        <div class="semantic-metric-card">
-                            <h4>Punto legítimo más cercano</h4>
-                            <p id="nearestLegitimateMetric">Sin datos.</p>
-                        </div>
-                        <div class="semantic-metric-card">
-                            <h4>Distancia a centroides</h4>
-                            <p id="centroidMetrics">Sin datos.</p>
-                        </div>
-                        <div class="semantic-metric-card hover-card">
-                            <h4>Punto bajo el cursor</h4>
-                            <p id="hoverDetails">Pasa el mouse sobre un punto para ver el asunto, su clase y su semejanza con el asunto analizado.</p>
-                        </div>
-                        <div class="semantic-metric-card hover-card">
-                            <h4>Estado de render</h4>
-                            <p id="semanticDebug">Esperando datos del análisis.</p>
-                        </div>
-                    </aside>
+                </div>
+
+                <div class="keywords-box" id="keywordsBox">
+                    <h4>Desencadenantes Algorítmicos Detectados (Leave-One-Out):</h4>
+                    <div class="chips" id="keywordChips"></div>
+                </div>
+
+                <div class="explanation-box">
+                    <h4>Diagnóstico XAI (Traducción Natural):</h4>
+                    <p id="naturalExplanation">Cargando...</p>
+                    <div id="semanticReasoningText" class="semantic-reasoning-note hidden"></div>
+                </div>
+
+                <div class="semantic-metrics-strip" id="semanticMetricsStrip">
+                    <div class="smetric-item">
+                        <span class="smetric-label">Vecindad local</span>
+                        <p id="semanticNeighborSummary" class="smetric-value">Sin datos.</p>
+                    </div>
+                    <div class="smetric-item">
+                        <span class="smetric-label">Phishing más cercano</span>
+                        <p id="nearestPhishingMetric" class="smetric-value">Sin datos.</p>
+                    </div>
+                    <div class="smetric-item">
+                        <span class="smetric-label">Legítimo más cercano</span>
+                        <p id="nearestLegitimateMetric" class="smetric-value">Sin datos.</p>
+                    </div>
+                    <div class="smetric-item">
+                        <span class="smetric-label">Distancia a centroides</span>
+                        <p id="centroidMetrics" class="smetric-value">Sin datos.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -207,11 +182,24 @@
     <div id="historySidebar" class="history-sidebar">
         <div class="sidebar-header">
             <h3>Historial Forense</h3>
-            <button id="closeHistory" class="close-btn">&times;</button>
+            <div class="sidebar-header-actions">
+                <button id="closeHistory" class="close-btn">&times;</button>
+            </div>
         </div>
         <div id="historyList" class="history-list">
             <!-- Tarjetas de historial se insertan aquí -->
             <p class="empty-msg">No hay análisis previos.</p>
+        </div>
+        <div class="sidebar-footer">
+            <button id="clearHistoryBtn" class="clear-history-btn clear-history-btn-footer" title="Borrar historial">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;flex-shrink:0">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                    <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                </svg>
+                Borrar todo
+            </button>
         </div>
     </div>
 
@@ -303,14 +291,6 @@
                             <div class="semantic-metric-card">
                                 <h4>Distancia a centroides</h4>
                                 <p id="historyCentroidMetrics">Sin datos.</p>
-                            </div>
-                            <div class="semantic-metric-card hover-card">
-                                <h4>Punto bajo el cursor</h4>
-                                <p id="historyHoverDetails">Pasa el mouse sobre un punto para ver el asunto, su clase y su semejanza con el asunto analizado.</p>
-                            </div>
-                            <div class="semantic-metric-card hover-card">
-                                <h4>Estado de render</h4>
-                                <p id="historySemanticDebug">Esperando datos del historial.</p>
                             </div>
                         </aside>
                     </div>

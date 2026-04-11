@@ -348,6 +348,28 @@ async def get_history():
     except:
         return []
 
+@app.delete("/api/history")
+async def clear_history():
+    if HISTORY_FILE.exists():
+        HISTORY_FILE.write_text("[]", encoding="utf-8")
+    return {"ok": True}
+
+@app.delete("/api/history/{index}")
+async def delete_history_entry(index: int):
+    if not HISTORY_FILE.exists():
+        raise HTTPException(status_code=404, detail="No history file found")
+    try:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            history = json.load(f)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error reading history")
+    if index < 0 or index >= len(history):
+        raise HTTPException(status_code=404, detail="History entry not found")
+    history.pop(index)
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, indent=2, ensure_ascii=False)
+    return {"ok": True}
+
 _FAKE_BODY_PLACEHOLDER = "No se generó reconstrucción de cuerpo."
 _POWERSAFE_CACHE_SCHEMA_VERSION = 4
 _semantic_cache = None

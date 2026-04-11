@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyList = document.getElementById('historyList');
     const openHistoryBtn = document.getElementById('openHistory');
     const closeHistoryBtn = document.getElementById('closeHistory');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
     const historyModalOverlay = document.getElementById('historyModalOverlay');
     const closeHistoryModalBtn = document.getElementById('closeHistoryModal');
     const exportHistoryPdfBtn = document.getElementById('exportHistoryPdfBtn');
@@ -493,7 +494,13 @@ document.addEventListener('DOMContentLoaded', () => {
         semanticModeBtn.textContent = semanticState.neighborsOnly ? 'Mostrar todos los puntos' : 'Mostrar solo vecinos';
 
         const points = semanticMap.points || [];
-        const neighbors = points.filter(point => point.neighbor_rank > 0 && point.neighbor_rank <= semanticState.neighborCount);
+        const nearestPhishingIdx = semanticMap.nearest_by_class?.phishing?.index ?? -1;
+        const nearestLegitimateIdx = semanticMap.nearest_by_class?.legitimate?.index ?? -1;
+        const neighbors = points.filter(point =>
+            (point.neighbor_rank > 0 && point.neighbor_rank <= semanticState.neighborCount) ||
+            point.id === nearestPhishingIdx ||
+            point.id === nearestLegitimateIdx
+        );
         const allPhishing = points.filter(point => point.label === 'phishing');
         const allLegitimate = points.filter(point => point.label === 'legitimate');
         const neighborIds = new Set(neighbors.map(point => point.id));
@@ -634,17 +641,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         traces.push({
             type: 'scatter',
-            mode: 'markers+text',
+            mode: 'markers',
             name: 'Asunto analizado',
             x: [semanticMap.analysis_point.x],
             y: [semanticMap.analysis_point.y],
-            text: ['ASUNTO ANALIZADO'],
-            textposition: 'top center',
-            textfont: {
-                color: '#93c5fd',
-                size: 13,
-                family: 'Inter, sans-serif',
-            },
             marker: {
                 color: '#2563eb',
                 size: 14,
@@ -710,11 +710,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const nearestPhishing = getPointByIndex(points, semanticMap.nearest_by_class?.phishing?.index);
         const nearestLegitimate = getPointByIndex(points, semanticMap.nearest_by_class?.legitimate?.index);
-        nearestPhishingMetric.innerHTML = nearestPhishing
-            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.phishing.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.phishing.similarity)}<br><span>${escapeHtml(nearestPhishing.subject_preview || nearestPhishing.subject || '')}</span>`
+        nearestPhishingMetric.textContent = nearestPhishing
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.phishing.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.phishing.similarity)}`
             : 'Sin datos.';
-        nearestLegitimateMetric.innerHTML = nearestLegitimate
-            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.legitimate.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.legitimate.similarity)}<br><span>${escapeHtml(nearestLegitimate.subject_preview || nearestLegitimate.subject || '')}</span>`
+        nearestLegitimateMetric.textContent = nearestLegitimate
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.legitimate.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.legitimate.similarity)}`
             : 'Sin datos.';
         centroidMetrics.innerHTML = `
             Phishing: ${formatMetric(semanticMap.centroid_distances?.phishing)}<br>
@@ -787,7 +787,13 @@ document.addEventListener('DOMContentLoaded', () => {
         historySemanticState.neighborsOnly = false;
 
         const points = semanticMap.points || [];
-        const neighbors = points.filter(point => point.neighbor_rank > 0 && point.neighbor_rank <= historySemanticState.neighborCount);
+        const nearestPhishingIdx = semanticMap.nearest_by_class?.phishing?.index ?? -1;
+        const nearestLegitimateIdx = semanticMap.nearest_by_class?.legitimate?.index ?? -1;
+        const neighbors = points.filter(point =>
+            (point.neighbor_rank > 0 && point.neighbor_rank <= historySemanticState.neighborCount) ||
+            point.id === nearestPhishingIdx ||
+            point.id === nearestLegitimateIdx
+        );
         const allPhishing = points.filter(point => point.label === 'phishing');
         const allLegitimate = points.filter(point => point.label === 'legitimate');
         const neighborIds = new Set(neighbors.map(point => point.id));
@@ -922,17 +928,10 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             {
                 type: 'scatter',
-                mode: 'markers+text',
+                mode: 'markers',
                 name: 'Asunto analizado',
                 x: [semanticMap.analysis_point.x],
                 y: [semanticMap.analysis_point.y],
-                text: ['ASUNTO ANALIZADO'],
-                textposition: 'top center',
-                textfont: {
-                    color: '#93c5fd',
-                    size: 13,
-                    family: 'Inter, sans-serif',
-                },
                 marker: {
                     color: '#2563eb',
                     size: 24,
@@ -982,11 +981,11 @@ document.addEventListener('DOMContentLoaded', () => {
         historySemanticView.neighborSummary.textContent = `Entre los ${historySemanticState.neighborCount} vecinos más cercanos, ${neighbors.filter(point => point.label === 'phishing').length} son phishing y ${neighbors.filter(point => point.label === 'legitimate').length} son legítimos.`;
         const nearestPhishing = getPointByIndex(points, semanticMap.nearest_by_class?.phishing?.index);
         const nearestLegitimate = getPointByIndex(points, semanticMap.nearest_by_class?.legitimate?.index);
-        historySemanticView.nearestPhishingMetric.innerHTML = nearestPhishing
-            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.phishing.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.phishing.similarity)}<br><span>${escapeHtml(nearestPhishing.subject_preview || nearestPhishing.subject || '')}</span>`
+        historySemanticView.nearestPhishingMetric.textContent = nearestPhishing
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.phishing.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.phishing.similarity)}`
             : 'Sin datos.';
-        historySemanticView.nearestLegitimateMetric.innerHTML = nearestLegitimate
-            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.legitimate.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.legitimate.similarity)}<br><span>${escapeHtml(nearestLegitimate.subject_preview || nearestLegitimate.subject || '')}</span>`
+        historySemanticView.nearestLegitimateMetric.textContent = nearestLegitimate
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.legitimate.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.legitimate.similarity)}`
             : 'Sin datos.';
         historySemanticView.centroidMetrics.innerHTML = `Phishing: ${formatMetric(semanticMap.centroid_distances?.phishing)}<br>Legítimo: ${formatMetric(semanticMap.centroid_distances?.legitimate)}`;
         updateHoverCard(null, historySemanticView.hoverDetails);
@@ -1066,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayResults(data) {
         lastResult = data;
-        masterReasoningPanel.classList.add('hidden'); // panel redundante, siempre oculto
+        masterReasoningPanel?.classList.add('hidden');
         renderResultView(
             {
                 xaiPanel,
@@ -1227,50 +1226,40 @@ document.addEventListener('DOMContentLoaded', () => {
             exportHost.style.top = '0';
             exportHost.style.width = '1400px';
             exportHost.style.height = '920px';
-            exportHost.style.background = '#ffffff';
+            exportHost.style.background = '#0f111a';
             document.body.appendChild(exportHost);
 
             try {
                 const sourceData = (plotElement.data || []).map(trace => ({ ...trace }));
                 const sourceLayout = { ...(plotElement.layout || {}) };
-                const exportData = sourceData.map(trace => {
-                    const cloned = { ...trace };
-                    if (cloned.mode === 'markers+text' && cloned.name === 'Asunto analizado') {
-                        cloned.textfont = {
-                            ...(cloned.textfont || {}),
-                            color: '#111827',
-                            size: 16,
-                        };
-                    }
-                    return cloned;
-                });
+                const exportData = sourceData.map(trace => ({ ...trace }));
 
                 const exportLayout = {
                     ...sourceLayout,
-                    paper_bgcolor: '#ffffff',
-                    plot_bgcolor: '#ffffff',
-                    font: { color: '#111827', family: 'Inter, sans-serif', size: 15 },
+                    paper_bgcolor: '#0f111a',
+                    plot_bgcolor: '#141827',
+                    font: { color: '#e2e8f0', family: 'Inter, sans-serif', size: 15 },
                     legend: {
                         ...(sourceLayout.legend || {}),
-                        bgcolor: 'rgba(255,255,255,0.96)',
-                        bordercolor: '#cbd5e1',
+                        bgcolor: 'rgba(20,24,39,0.96)',
+                        bordercolor: '#1f293d',
                         borderwidth: 1,
-                        font: { color: '#111827', size: 13 },
+                        font: { color: '#e2e8f0', size: 13 },
                     },
                     margin: { l: 90, r: 30, t: 30, b: 80 },
                     xaxis: {
                         ...(sourceLayout.xaxis || {}),
-                        title: { text: 'Componente principal 1', font: { color: '#111827', size: 15 } },
-                        gridcolor: '#dbe4ee',
-                        zerolinecolor: '#94a3b8',
-                        tickfont: { color: '#374151', size: 12 },
+                        title: { text: 'Componente principal 1', font: { color: '#94a3b8', size: 15 } },
+                        gridcolor: '#1f293d',
+                        zerolinecolor: '#374151',
+                        tickfont: { color: '#94a3b8', size: 12 },
                     },
                     yaxis: {
                         ...(sourceLayout.yaxis || {}),
-                        title: { text: 'Componente principal 2', font: { color: '#111827', size: 15 } },
-                        gridcolor: '#dbe4ee',
-                        zerolinecolor: '#94a3b8',
-                        tickfont: { color: '#374151', size: 12 },
+                        title: { text: 'Componente principal 2', font: { color: '#94a3b8', size: 15 } },
+                        gridcolor: '#1f293d',
+                        zerolinecolor: '#374151',
+                        tickfont: { color: '#94a3b8', size: 12 },
                     },
                 };
 
@@ -1395,9 +1384,14 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setTextColor(...rgb);
             const lines = doc.splitTextToSize(String(text), width);
             const lineH = size * 0.56;
-            lines.forEach((line) => {
+            lines.forEach((line, i) => {
                 guardModern(lineH + 2);
-                doc.text(line, x, y);
+                const isLast = i === lines.length - 1;
+                if (isLast || bold) {
+                    doc.text(line, x, y);
+                } else {
+                    doc.text(line, x, y, { align: 'justify', maxWidth: width });
+                }
                 y += lineH;
             });
             y += 2.5;
@@ -1620,6 +1614,22 @@ document.addEventListener('DOMContentLoaded', () => {
         historySidebar.classList.remove('open');
     });
 
+    clearHistoryBtn?.addEventListener('click', async () => {
+        clearHistoryBtn.disabled = true;
+        clearHistoryBtn.textContent = 'Borrando...';
+        try {
+            const resp = await fetch('/api/history', { method: 'DELETE' });
+            if (resp.ok) {
+                renderHistory([]);
+            }
+        } catch (err) {
+            console.error('Error borrando historial:', err);
+        } finally {
+            clearHistoryBtn.disabled = false;
+            clearHistoryBtn.textContent = 'Borrar todo';
+        }
+    });
+
     closeHistoryModalBtn.addEventListener('click', () => {
         closeHistoryModal();
     });
@@ -1650,16 +1660,43 @@ document.addEventListener('DOMContentLoaded', () => {
             historyList.innerHTML = '<p class="empty-msg">No hay análisis previos.</p>';
             return;
         }
-        items.forEach(item => {
+        items.forEach((item, index) => {
             const card = document.createElement('div');
             card.className = `history-card ${item.status}`;
             card.innerHTML = `
                 <div class="card-header">
                     <span class="card-status">${item.status}</span>
-                    <span class="card-time">${formatTime(item.timestamp)}</span>
+                    <div class="card-header-right">
+                        <span class="card-time">${formatTime(item.timestamp)}</span>
+                        <button class="card-delete-btn" title="Borrar análisis" aria-label="Borrar análisis">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-subject">${item.subject}</div>
             `;
+            card.querySelector('.card-delete-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                try {
+                    const resp = await fetch(`/api/history/${index}`, { method: 'DELETE' });
+                    if (resp.ok) {
+                        card.style.transition = 'opacity 0.25s, transform 0.25s';
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateX(30px)';
+                        setTimeout(() => loadHistory(), 280);
+                    }
+                } catch (err) {
+                    console.error('Error borrando entrada de historial:', err);
+                    btn.disabled = false;
+                }
+            });
             card.addEventListener('click', () => {
                 openHistoryModal(item);
                 historySidebar.classList.remove('open');
