@@ -83,12 +83,14 @@ class HFEncoderEmbedder(BaseEmbedder):
         precision: torch.dtype = torch.float32,
         max_length: int = 512,
         cache_dir: Optional[str] = None,
+        local_files_only: bool = False,
     ) -> None:
         super().__init__(name, repo, query_prefix, batch_size)
         self.device     = device
         self.precision  = precision
         self.max_length = max_length
         self.cache_dir  = cache_dir
+        self.local_files_only = local_files_only
         self._tokenizer = None
         self._model = None
 
@@ -106,10 +108,15 @@ class HFEncoderEmbedder(BaseEmbedder):
                 f"Loading HuggingFace encoder model '{self.repo}' from cache={self.cache_dir} "
                 f"onto {str(self.device).upper()} with precision {self.precision}..."
             )
-            self._tokenizer = AutoTokenizer.from_pretrained(self.repo, cache_dir=self.cache_dir)
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.repo,
+                cache_dir=self.cache_dir,
+                local_files_only=self.local_files_only,
+            )
             self._model = AutoModel.from_pretrained(
                 self.repo, 
                 cache_dir=self.cache_dir,
+                local_files_only=self.local_files_only,
                 torch_dtype=self.precision,
                 low_cpu_mem_usage=True
             )

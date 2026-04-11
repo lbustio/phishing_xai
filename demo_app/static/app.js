@@ -626,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
             y: [semanticMap.analysis_point.y],
             marker: {
                 color: 'rgba(59, 130, 246, 0.24)',
-                size: 40,
+                size: 24,
                 line: { color: 'rgba(96, 165, 250, 0.78)', width: 2.2 },
             },
             hoverinfo: 'skip',
@@ -647,10 +647,30 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             marker: {
                 color: '#2563eb',
-                size: 24,
-                line: { color: '#dbeafe', width: 3.4 },
+                size: 14,
+                line: { color: '#dbeafe', width: 2.4 },
             },
             hovertemplate: `<b>Asunto analizado</b><br>${escapeHtml(semanticMap.analysis_point.subject_preview || semanticMap.analysis_point.subject || '')}<extra></extra>`,
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Al centroide phishing',
+            x: [semanticMap.analysis_point.x, semanticMap.centroids.phishing.x],
+            y: [semanticMap.analysis_point.y, semanticMap.centroids.phishing.y],
+            line: { color: 'rgba(255, 120, 120, 0.9)', width: 2.5, dash: 'dash' },
+            hoverinfo: 'skip',
+            showlegend: false,
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Al centroide legítimo',
+            x: [semanticMap.analysis_point.x, semanticMap.centroids.legitimate.x],
+            y: [semanticMap.analysis_point.y, semanticMap.centroids.legitimate.y],
+            line: { color: 'rgba(110, 231, 183, 0.9)', width: 2.5, dash: 'dash' },
+            hoverinfo: 'skip',
+            showlegend: false,
         });
 
         const layout = {
@@ -919,6 +939,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     line: { color: '#dbeafe', width: 3.4 },
                 },
                 hovertemplate: `<b>Asunto analizado</b><br>${escapeHtml(semanticMap.analysis_point.subject_preview || semanticMap.analysis_point.subject || '')}<extra></extra>`,
+            },
+            {
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Al centroide phishing',
+                x: [semanticMap.analysis_point.x, semanticMap.centroids.phishing.x],
+                y: [semanticMap.analysis_point.y, semanticMap.centroids.phishing.y],
+                line: { color: 'rgba(255, 120, 120, 0.9)', width: 2.5, dash: 'dash' },
+                hoverinfo: 'skip',
+                showlegend: false,
+            },
+            {
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Al centroide legítimo',
+                x: [semanticMap.analysis_point.x, semanticMap.centroids.legitimate.x],
+                y: [semanticMap.analysis_point.y, semanticMap.centroids.legitimate.y],
+                line: { color: 'rgba(110, 231, 183, 0.9)', width: 2.5, dash: 'dash' },
+                hoverinfo: 'skip',
+                showlegend: false,
             },
         ];
 

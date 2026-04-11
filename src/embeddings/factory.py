@@ -31,6 +31,7 @@ from typing import Optional
 import torch
 
 from config.paths import HF_CACHE_HINT_DIR
+from .cache_utils import get_hf_model_cache_status
 from .base import BaseEmbedder
 from .sentence_trans import SentenceTransformerEmbedder
 from .hf_encoder import HFEncoderEmbedder
@@ -81,12 +82,19 @@ def get_embedder(
     instruction_mode = model_config.get("instruction_mode", "prefix")
     batch_size  = model_config.get("batch_size", 32)
     trust_rc    = model_config.get("trust_remote_code", False)
+    cache_status = get_hf_model_cache_status(repo, HF_CACHE_HINT_DIR)
+    local_files_only = cache_status == "cached"
 
     logger.info(
         f"Creating embedder for '{name}' "
         f"(type={model_type}, repo={repo}, device={device}, "
         f"batch_size={batch_size}, prefix={repr(prefix)[:60]})."
     )
+    if local_files_only:
+        logger.info(
+            "Local Hugging Face cache detected for '%s'. The embedder will use local_files_only=True.",
+            repo,
+        )
 
     if model_type == "sentence_transformer":
         return SentenceTransformerEmbedder(
@@ -99,6 +107,7 @@ def get_embedder(
             precision=precision,
             trust_remote_code=trust_rc,
             cache_folder=str(HF_CACHE_HINT_DIR),
+            local_files_only=local_files_only,
         )
 
     elif model_type == "hf_encoder":
@@ -111,6 +120,7 @@ def get_embedder(
             precision=precision,
             max_length=512,
             cache_dir=str(HF_CACHE_HINT_DIR),
+            local_files_only=local_files_only,
         )
 
     elif model_type == "large_llm":
@@ -130,6 +140,7 @@ def get_embedder(
             checkpoint_dir=checkpoint_dir,
             use_last_token_pool=use_ltp,
             cache_dir=str(HF_CACHE_HINT_DIR),
+            local_files_only=local_files_only,
         )
 
     else:

@@ -60,6 +60,7 @@ class LLMEmbedder(BaseEmbedder):
         checkpoint_dir: Optional[Path] = None,
         use_last_token_pool: bool = True,
         cache_dir: Optional[str] = None,
+        local_files_only: bool = False,
     ) -> None:
         super().__init__(name, repo, query_prefix, batch_size)
         self.device = device
@@ -67,6 +68,7 @@ class LLMEmbedder(BaseEmbedder):
         self.checkpoint_dir = checkpoint_dir
         self.use_last_token_pool = use_last_token_pool
         self.cache_dir = cache_dir
+        self.local_files_only = local_files_only
         self._model = None
         self._tokenizer = None
 
@@ -126,6 +128,7 @@ class LLMEmbedder(BaseEmbedder):
             "torch_dtype": dtype,
             "trust_remote_code": self.trust_remote_code,
             "cache_dir": self.cache_dir,
+            "local_files_only": self.local_files_only,
             "low_cpu_mem_usage": True,
         }
         

@@ -42,6 +42,7 @@ from config.paths import RUNS_DIR, TABLES_DIR, HF_CACHE_HINT_DIR, RESULTS_DIR, T
 from config.experiment import get_embedding_config, XAI_CONFIG, PRIMARY_METRIC
 from src.data_loader import load_dataset
 from src.embedding_store import EmbeddingStore
+from src.embeddings.cache_utils import get_hf_model_cache_status
 from src.embeddings.factory import get_embedder
 from src.xai.llm_explainer_v2 import NaturalLanguageExplainer
 from src.xai.word_ablation_explainer import compute_contextual_ablation_keywords, resolve_guardrailed_verdict
@@ -96,15 +97,7 @@ def get_runtime_technologies() -> list[str]:
 
 def get_model_status(repo_name: str):
     """Checks if a HuggingFace model is likely cached locally."""
-    safe_repo = f"models--{repo_name.replace('/', '--')}"
-    model_path = HF_CACHE_HINT_DIR / safe_repo
-    if not model_path.exists():
-        return "missing"
-    # Check if there are blobs (actual data)
-    blobs_path = model_path / "blobs"
-    if not blobs_path.exists() or not any(blobs_path.iterdir()):
-        return "incomplete"
-    return "cached"
+    return get_hf_model_cache_status(repo_name, HF_CACHE_HINT_DIR)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

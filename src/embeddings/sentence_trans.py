@@ -58,6 +58,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         precision: torch.dtype = torch.float32,
         trust_remote_code: bool = False,
         cache_folder: Optional[str] = None,
+        local_files_only: bool = False,
     ) -> None:
         super().__init__(name, repo, query_prefix, batch_size)
         self.device            = device
@@ -65,6 +66,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         self.instruction_mode  = instruction_mode
         self.trust_remote_code = trust_remote_code
         self.cache_folder      = cache_folder
+        self.local_files_only  = local_files_only
         self._model = None
 
     def _ensure_model(self):
@@ -87,6 +89,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
                 device=str(self.device),
                 trust_remote_code=self.trust_remote_code,
                 cache_folder=self.cache_folder,
+                local_files_only=self.local_files_only,
                 model_kwargs={"torch_dtype": self.precision}
             )
         return self._model

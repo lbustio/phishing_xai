@@ -72,6 +72,8 @@ $env:HF_TOKEN="your_token_here"
 
 The code may also read `HUGGING_FACE_HUB_TOKEN` through the Hugging Face stack, depending on the model backend and library behavior.
 
+If an embedding model is already present under `results/cache/huggingface/`, the current embedding factory attempts to load it in local-only mode to avoid unnecessary Hub checks and repeat downloads.
+
 ## 4. Local Directory Contract
 
 The project expects these root-level directories to exist:
@@ -86,6 +88,7 @@ The project expects these root-level directories to exist:
 The paths are centralized in [`../config/paths.py`](../config/paths.py). That module creates required directories automatically at import time, including:
 
 - `results/cache/`
+- `results/cache/huggingface/`
 - `results/frontend_analyses/`
 - `results/runs/`
 - `results/tables/`
@@ -412,6 +415,7 @@ Typical run outputs include:
 Global outputs include:
 
 - `results/cache/embeddings/`
+- `results/cache/huggingface/`
 - `results/checkpoints/`
 - `results/tables/all_results.csv`
 
@@ -488,6 +492,26 @@ Important interpretation rule:
 - the reported similarity and distance values are computed in the original embedding space with cosine similarity / cosine distance
 
 The browser-side chart is rendered with Plotly loaded from a CDN at runtime. It is not a Python dependency in `environment.yml`.
+
+## 10.5 Lightweight Public Deploy
+
+The repository also includes a simplified public-demo package under [`../deploy/`](../deploy/).
+
+That package is intentionally narrower than the full local PowerToy. In particular, it omits:
+
+- the semantic scatter based on the private local dataset
+- history reconstruction
+- PDF export
+- other dataset-dependent artifacts that should remain local
+
+The deploy package includes:
+
+- a simplified FastAPI app
+- a sanitized model bundle
+- a lightweight frontend
+- a Render service template
+
+The operational guide for that public-demo package is in [`../deploy/README.md`](../deploy/README.md).
 
 ## 11. Logging
 

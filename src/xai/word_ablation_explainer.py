@@ -6,9 +6,6 @@ import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 
 from config.experiment import XAI_CONFIG
@@ -319,6 +316,10 @@ class LIMEExplainer:
         if not features:
             return
 
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
         words = [item[0] for item in features]
         weights = [item[1] for item in features]
         colors = ["#e74c3c" if weight > 0 else "#2ecc71" for weight in weights]
@@ -341,6 +342,9 @@ class LIMEExplainer:
         plt.close(fig)
 
     def _save_aggregate_plot(self, explanations: List[Dict[str, Any]]) -> None:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
         from collections import defaultdict
 
         word_weights: Dict[str, List[float]] = defaultdict(list)

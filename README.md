@@ -120,6 +120,11 @@ Each classifier has an explicit hyperparameter grid in [`config/experiment.py`](
 |-- demo_app/
 |   |-- api.py
 |   `-- static/
+|-- deploy/
+|   |-- app.py
+|   |-- bundle/
+|   |-- static/
+|   `-- render.yaml
 |-- docs/
 |   |-- README_TECHNICAL.md
 |   `-- README_THEORETICAL.md
@@ -148,6 +153,8 @@ Important version-control notes:
 - the `results/` directory is intentionally ignored because it can become very large
 - `secrets/` is intentionally ignored
 
+The repository also contains a simplified public-demo deploy package under [`deploy/`](deploy/) for Render. That package is intentionally narrower than the full local PowerToy and is designed for lightweight public hosting.
+
 ## What The Pipeline Does
 
 At a high level, the pipeline performs the following steps:
@@ -169,11 +176,14 @@ The project includes several persistence mechanisms:
 
 - dataset fingerprinting after preprocessing
 - embedding cache under `results/cache/embeddings/`
+- Hugging Face model cache under `results/cache/huggingface/`
 - experiment checkpointing under `results/checkpoints/`
 - run-specific artifacts under `results/runs/<run_id>/`
 - cumulative tabulation under `results/tables/all_results.csv`
 
 This matters because the experiment space can be large. Without these mechanisms, reruns after interruption would be unnecessarily expensive.
+
+When a Hugging Face embedding model is already present in the local cache, the current codebase attempts to reuse it in local-only mode instead of requerying the Hub on each run.
 
 ## XAI Scope
 
@@ -189,6 +199,7 @@ The current demo application also includes a semantic visualization layer:
 - class-colored scatter plot for phishing and legitimate subjects
 - interactive inspection of local neighbors, per-point similarity, and class centroids
 - a strongly highlighted marker for the subject currently being analyzed
+- dashed lines from the analyzed subject to each class centroid, colored by class (red to phishing centroid, green to legitimate centroid)
 - a neighbor slider and local-neighborhood emphasis in the interactive view
 - a semantic reading note appended to the reasoning panel
 - the same semantic view reconstructed inside the history-detail modal
@@ -334,6 +345,7 @@ The FastAPI PowerToy under `demo_app/` currently provides:
 - hover inspection of individual points with similarity and distance to the analyzed subject
 - nearest-neighbor and centroid summaries by class
 - a visible, explicitly labeled marker for the analyzed subject
+- dashed centroid lines in the scatter: one red line to the phishing centroid and one green line to the legitimate centroid
 - natural-language reasoning in Spanish
 - synthetic email-body generation in the same detected language as the analyzed subject
 - per-analysis artifact persistence under `results/frontend_analyses/`
