@@ -4,13 +4,9 @@
   <img src="demo_app/static/logo-corporate.svg" alt="phishing_xai logo" width="220">
 </p>
 
-<p align="center">
-  <img src="demo_app/static/logo-shield.svg" alt="phishing shield icon" width="72">
-</p>
+<h1 align="justify">Experimental framework for explainable phishing detection on short email subjects.</h1>
 
-<p align="center">
-  Experimental framework for explainable phishing detection on short email subjects.
-</p>
+
 
 Explainable phishing detection pipeline for short email subjects.
 
