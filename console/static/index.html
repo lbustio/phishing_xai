@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <title>Phishing XAI Analyzer</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="styles.css?v=20260416d">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <div class="brand-box">
+                    <div class="brand-lockup">
+                        <div class="brand-logo-badge">
+                            <div class="brand-logo-badge-inner">
+                                <img src="logo-corporate.svg" alt="Phishing XAI Shield logo" class="brand-logo">
+                            </div>
+                        </div>
+                        <div class="brand-title-block">
+                            <h1>Phishing XAI <span class="shield-text">Shield</span></h1>
+                            <p class="brand-tagline">Forensic Threat Intelligence Console</p>
+                        </div>
+                    </div>
+                    <div class="scientific-desc">
+                        <p><strong>Plataforma Forense de Análisis de Atribución y Explicabilidad Profunda (XAI)</strong></p>
+                    </div>
+                </div>
+                <button id="soundToggle" class="sound-toggle" title="Alternar Sonido">
+                    <span id="soundIcon">🔊</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Model Info Card -->
+        <div id="modelInfoCard" class="model-info-card glass-panel hidden">
+            <div class="mic-summary" id="micSummary">
+                <div class="mic-pills">
+                    <span class="mic-pill mic-pill-emb" id="micEmbPill">—</span>
+                    <span class="mic-sep">+</span>
+                    <span class="mic-pill mic-pill-clf" id="micClfPill">—</span>
+                    <span class="mic-pill mic-pill-f1" id="micF1Pill">—</span>
+                    <span class="mic-pill mic-pill-hw" id="micHwPill">—</span>
+                </div>
+                <button class="mic-toggle-btn" id="micToggleBtn" title="Ver detalles técnicos">
+                    <span id="micToggleLabel">Ver detalles</span>
+                    <svg id="micToggleIcon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </div>
+
+            <div class="mic-detail" id="micDetail">
+                <div class="mic-detail-grid">
+                    <!-- Embedding -->
+                    <section class="mic-section">
+                        <h5 class="mic-section-title">Modelo de Embeddings</h5>
+                        <div class="mic-kv" id="micEmbName"></div>
+                        <div class="mic-kv" id="micEmbParadigm"></div>
+                        <div class="mic-kv" id="micEmbType"></div>
+                        <div class="mic-kv" id="micEmbBatch"></div>
+                        <div class="mic-kv" id="micEmbSize"></div>
+                        <div class="mic-kv" id="micEmbDownload"></div>
+                        <div class="mic-kv" id="micEmbUrl"></div>
+                        <div class="mic-rationale" id="micEmbRationale"></div>
+                    </section>
+                    <!-- Classifier -->
+                    <section class="mic-section">
+                        <h5 class="mic-section-title">Clasificador</h5>
+                        <div class="mic-kv" id="micClfName"></div>
+                        <div class="mic-kv" id="micClfParams"></div>
+                        <div class="mic-kv" id="micModelSize"></div>
+                        <div class="mic-kv" id="micRunDate"></div>
+                        <div class="mic-kv" id="micRunDevice"></div>
+                        <div class="mic-rationale" id="micClfRationale"></div>
+                    </section>
+                    <!-- Metrics -->
+                    <section class="mic-section mic-section-metrics">
+                        <h5 class="mic-section-title">Métricas (CV 5-fold)</h5>
+                        <div class="mic-metrics-grid" id="micMetricsGrid"></div>
+                        <div class="mic-rationale mic-selection-reason" id="micSelectionReason"></div>
+                    </section>
+                </div>
+                <!-- Top candidates table -->
+                <div class="mic-ranking">
+                    <h5 class="mic-section-title">Top 10 — Todas las combinaciones evaluadas</h5>
+                    <div class="mic-table-wrap">
+                        <table class="mic-table" id="micRankingTable">
+                            <thead><tr><th>#</th><th>Embedding</th><th>Clasificador</th><th>F1-macro</th><th>Accuracy</th><th>ROC-AUC</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Stats Dashboard -->
+        <div id="sessionStats" class="session-stats glass-panel hidden">
+            <div class="stats-grid">
+                <div class="stat-item"><span class="stat-num" id="statTotal">0</span><span class="stat-label">Analizados</span></div>
+                <div class="stat-item"><span class="stat-num stat-phishing" id="statPhishing">0</span><span class="stat-label">Phishing</span></div>
+                <div class="stat-item"><span class="stat-num stat-legit" id="statLegit">0</span><span class="stat-label">Legítimos</span></div>
+                <div class="stat-item"><span class="stat-num" id="statRate">0%</span><span class="stat-label">Tasa phishing</span></div>
+                <div class="stat-item"><span class="stat-num" id="statAvgConf">0%</span><span class="stat-label">Confianza media</span></div>
+                <div class="stat-item" id="statFeedbackItem"><span class="stat-num stat-legit" id="statFeedback">—</span><span class="stat-label">Feedback</span></div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <main class="input-section glass-panel">
+            <h2>Analizador de Asuntos</h2>
+            <div class="input-group">
+                <input type="text" id="subjectInput" placeholder="Ej: URGENTE: Su cuenta será suspendida si no verifica..." autocomplete="off">
+                <button id="analyzeBtn">ANALIZAR RIESGO</button>
+            </div>
+            <div class="email-paste-toggle-row">
+                <button id="emailPasteToggle" type="button" class="email-paste-toggle-btn">📧 Pegar correo completo (opcional)</button>
+            </div>
+            <div id="emailPasteArea" class="email-paste-area hidden">
+                <textarea id="emailPasteInput" rows="6" placeholder="Pega aquí el correo completo (From:, Subject:, cuerpo...). El sistema extrae el asunto automáticamente y usa el cuerpo real en lugar del sintético."></textarea>
+                <div id="emailParsePreview" class="email-parse-preview hidden">
+                    Asunto detectado: <strong id="parsedSubject"></strong>
+                </div>
+            </div>
+
+            <!-- Terminal de Logs (Tiempo Real) -->
+            <div id="logTerminal" class="log-terminal hidden">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                    <span class="terminal-title">Consola de Análisis Forense</span>
+                </div>
+                <div id="logContent" class="log-content"></div>
+            </div>
+            
+            <div id="loader" class="hidden">
+                <div class="spinner"></div>
+                <div class="loader-text">
+                    <p id="loaderMessage">Iniciando escaneo cuántico...</p>
+                    <div class="progress-bar"><div class="progress"></div></div>
+                </div>
+                <button id="cancelBtn" class="cancel-btn">CANCELAR ANÁLISIS</button>
+            </div>
+        </main>
+
+        <!-- Results Area -->
+        <section id="resultsSection" class="results-section hidden">
+            <!-- Arriba: Cuerpo del mensaje generado (ancho completo) -->
+            <div class="email-panel glass-panel">
+                <div class="email-mockup">
+                    <div class="email-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                        <span class="email-title">Vista Previa (Entorno Protegido)</span>
+                    </div>
+                    <div class="email-metadata">
+                        <p><strong>De:</strong> <span class="spoofed">seguridad@apple-soporte-oficial-24.com</span></p>
+                        <p><strong>Asunto:</strong> <span id="emailSubjectPrev">...</span></p>
+                    </div>
+                    <div class="email-body">
+                        <p id="emailBodySim">Reconstruyendo vector de ataque...</p>
+                        <a href="#" class="malicious-btn">Verificar Cuenta (Prueba de Concepto)</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Centro: Mapa Semántico (ancho completo) -->
+            <div id="semanticPanel" class="semantic-panel glass-panel hidden">
+                <div class="semantic-header">
+                    <div>
+                        <h3>Mapa Semántico Interactivo</h3>
+                        <p id="semanticInterpretation">Cargando visualización semántica real...</p>
+                    </div>
+                    <div class="semantic-controls">
+                        <label class="semantic-slider-group" for="neighborCount">
+                            <span>Vecinos resaltados</span>
+                            <input id="neighborCount" type="range" min="3" max="15" value="5">
+                            <strong id="neighborCountValue">5</strong>
+                        </label>
+                        <button id="semanticModeBtn" class="semantic-mode-btn" type="button">Mostrar solo vecinos</button>
+                    </div>
+                </div>
+                <div id="semanticPlot" class="semantic-plot" aria-label="Mapa semántico interactivo"></div>
+                <p id="semanticNote" class="semantic-note"></p>
+                <div id="hoverDetails" class="hover-card glass-panel">Pasa el mouse sobre un punto para ver el asunto, su clase y su semejanza con el asunto analizado.</div>
+                <div id="semanticDebug" class="semantic-debug"></div>
+            </div>
+
+            <!-- Abajo: Razonamiento completo con métricas semánticas -->
+            <div class="xai-panel glass-panel danger-theme" id="xaiPanel">
+                <div class="threat-header">
+                    <div class="threat-level" id="threatIcon">⚠️</div>
+                    <div class="threat-info">
+                        <h3 id="threatTitle">Alto Riesgo: Phishing Detectado</h3>
+                        <span id="threatConfidence" class="confidence-badge">Certeza: 98%</span>
+                    </div>
+                    <div id="langWarning" class="lang-warning hidden"></div>
+                </div>
+
+                <div class="keywords-box" id="keywordsBox">
+                    <h4>Desencadenantes Algorítmicos Detectados (Leave-One-Out):</h4>
+                    <div class="chips" id="keywordChips"></div>
+                </div>
+
+                <div id="counterfactualBox" class="counterfactual-box hidden">
+                    <h4>Explicación Contrafactual:</h4>
+                    <p id="counterfactualText"></p>
+                </div>
+
+                <div class="explanation-box">
+                    <h4>Diagnóstico XAI (Traducción Natural):</h4>
+                    <p id="naturalExplanation">Cargando...</p>
+                    <div id="semanticReasoningText" class="semantic-reasoning-note hidden"></div>
+                </div>
+
+                <div class="semantic-metrics-strip" id="semanticMetricsStrip">
+                    <div class="smetric-item">
+                        <span class="smetric-label">Vecindad local</span>
+                        <p id="semanticNeighborSummary" class="smetric-value">Sin datos.</p>
+                    </div>
+                    <div class="smetric-item">
+                        <span class="smetric-label">Phishing más cercano</span>
+                        <p id="nearestPhishingMetric" class="smetric-value">Sin datos.</p>
+                    </div>
+                    <div class="smetric-item">
+                        <span class="smetric-label">Legítimo más cercano</span>
+                        <p id="nearestLegitimateMetric" class="smetric-value">Sin datos.</p>
+                    </div>
+                    <div class="smetric-item">
+                        <span class="smetric-label">Distancia a centroides</span>
+                        <p id="centroidMetrics" class="smetric-value">Sin datos.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Similar Cases Panel -->
+        <div id="similarCasesPanel" class="similar-cases-panel glass-panel hidden">
+            <h4 class="similar-cases-title">Casos similares en historial</h4>
+            <div id="similarCasesList" class="similar-cases-list"></div>
+        </div>
+
+        <!-- Controles de Acción Global -->
+        <div id="resultActions" class="result-actions hidden">
+            <button id="exportPdfBtn" class="export-pdf-btn">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Exportar Reporte Forense (PDF)</span>
+            </button>
+            <button id="exportJsonBtn" class="export-json-btn">⬇ JSON</button>
+            <button id="exportCsvBtn" class="export-csv-btn">⬇ CSV</button>
+            <div class="feedback-row">
+                <span class="feedback-label">Veredicto:</span>
+                <button id="feedbackCorrectBtn" class="feedback-btn feedback-correct">✓ Correcto</button>
+                <button id="feedbackWrongBtn" class="feedback-btn feedback-wrong">✗ Incorrecto</button>
+                <span id="feedbackStatus" class="feedback-status"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attack Patterns Overlay -->
+    <div id="attackPatternsOverlay" class="attack-patterns-overlay hidden">
+        <div class="attack-patterns-panel glass-panel">
+            <div class="ap-header">
+                <h3>Biblioteca de Patrones — Sesión actual</h3>
+                <button id="closeAttackPatterns" class="ap-close-btn">✕</button>
+            </div>
+            <p class="ap-desc">Tokens con mayor impacto acumulado a lo largo de todos los análisis de esta sesión.</p>
+            <div class="ap-grid">
+                <div>
+                    <h4 class="ap-section-title ap-phishing">↑ Señales de Phishing</h4>
+                    <div id="apPhishingList" class="ap-list"></div>
+                </div>
+                <div>
+                    <h4 class="ap-section-title ap-legit">↓ Señales de Legitimidad</h4>
+                    <div id="apLegitList" class="ap-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar de Historial -->
+    <div id="historySidebar" class="history-sidebar">
+        <div class="sidebar-header">
+            <h3>Historial Forense</h3>
+            <div class="sidebar-header-actions">
+                <button id="closeHistory" class="close-btn">&times;</button>
+            </div>
+        </div>
+        <div id="historyList" class="history-list">
+            <!-- Tarjetas de historial se insertan aquí -->
+            <p class="empty-msg">No hay análisis previos.</p>
+        </div>
+        <div class="sidebar-footer">
+            <button id="clearHistoryBtn" class="clear-history-btn clear-history-btn-footer" title="Borrar historial">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;flex-shrink:0">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                    <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                </svg>
+                Borrar todo
+            </button>
+        </div>
+    </div>
+
+    <div id="historyModalOverlay" class="history-modal-overlay hidden" aria-hidden="true">
+        <div class="history-modal-shell">
+            <div class="history-modal-topbar glass-panel">
+                <div>
+                    <p class="history-modal-kicker">Historial Forense</p>
+                    <h3>Detalle del análisis archivado</h3>
+                </div>
+                <div class="history-modal-actions">
+                    <button id="exportHistoryPdfBtn" class="export-pdf-btn history-export-btn">
+                        <span>Exportar PDF</span>
+                    </button>
+                    <button id="closeHistoryModal" class="close-btn history-modal-close" aria-label="Cerrar detalle del historial">&times;</button>
+                </div>
+            </div>
+
+            <section id="historyModalResults" class="results-section history-modal-results">
+                <div class="xai-panel glass-panel danger-theme" id="historyXaiPanel">
+                    <div class="threat-header">
+                        <div class="threat-level" id="historyThreatIcon">⚠️</div>
+                        <div class="threat-info">
+                            <h3 id="historyThreatTitle">Alto Riesgo: Phishing Detectado</h3>
+                            <span id="historyThreatConfidence" class="confidence-badge">Certeza: 98%</span>
+                        </div>
+                    </div>
+
+                    <div class="explanation-box">
+                        <h4>Diagnóstico XAI (Traducción Natural):</h4>
+                        <p id="historyNaturalExplanation">Cargando...</p>
+                        <div id="historySemanticReasoningText" class="semantic-reasoning-note hidden"></div>
+                    </div>
+
+                    <div class="keywords-box">
+                        <h4>Desencadenantes Algorítmicos Detectados (Leave-One-Out):</h4>
+                        <div class="chips" id="historyKeywordChips"></div>
+                    </div>
+                </div>
+
+                <div class="email-panel glass-panel">
+                    <div class="email-mockup">
+                        <div class="email-header">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="email-title">Vista Previa (Entorno Protegido)</span>
+                        </div>
+                        <div class="email-metadata">
+                            <p><strong>De:</strong> <span class="spoofed">seguridad@apple-soporte-oficial-24.com</span></p>
+                            <p><strong>Asunto:</strong> <span id="historyEmailSubjectPrev">...</span></p>
+                        </div>
+                        <div class="email-body">
+                            <p id="historyEmailBodySim">Reconstruyendo vector de ataque...</p>
+                            <a href="#" class="malicious-btn">Verificar Cuenta (Prueba de Concepto)</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="historySemanticPanel" class="semantic-panel glass-panel hidden">
+                    <div class="semantic-header">
+                        <div>
+                            <h3>Mapa Semántico Interactivo</h3>
+                            <p id="historySemanticInterpretation">Cargando visualización semántica real...</p>
+                        </div>
+                        <div class="semantic-controls semantic-controls-static">
+                            <span class="semantic-static-badge">Historial archivado</span>
+                        </div>
+                    </div>
+
+                    <div class="semantic-body">
+                        <div class="semantic-canvas-shell">
+                            <div id="historySemanticPlot" class="semantic-plot" aria-label="Mapa semántico interactivo del historial"></div>
+                            <p id="historySemanticNote" class="semantic-note"></p>
+                            <div id="historyHoverDetails" class="hover-card glass-panel">Pasa el mouse sobre un punto para ver el asunto, su clase y su semejanza con el asunto analizado.</div>
+                            <div id="historySemanticDebug" class="semantic-debug"></div>
+                        </div>
+                        <aside class="semantic-sidebar">
+                            <div class="semantic-metric-card">
+                                <h4>Vecindad local</h4>
+                                <p id="historySemanticNeighborSummary">Sin datos.</p>
+                            </div>
+                            <div class="semantic-metric-card">
+                                <h4>Punto phishing más cercano</h4>
+                                <p id="historyNearestPhishingMetric">Sin datos.</p>
+                            </div>
+                            <div class="semantic-metric-card">
+                                <h4>Punto legítimo más cercano</h4>
+                                <p id="historyNearestLegitimateMetric">Sin datos.</p>
+                            </div>
+                            <div class="semantic-metric-card">
+                                <h4>Distancia a centroides</h4>
+                                <p id="historyCentroidMetrics">Sin datos.</p>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Botón Flotante para Historial -->
+    <button id="attackPatternsBtn" class="floating-action-btn floating-patterns-btn" title="Biblioteca de patrones de ataque">📊</button>
+
+    <button id="soundToggleFloating" class="floating-action-btn sound-toggle" title="Alternar Sonido">
+        <span id="soundIconFloating" aria-hidden="true"></span>
+    </button>
+
+    <button id="openHistory" class="floating-history-btn" title="Ver Historial">
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="history-icon-svg">
+            <path d="M12 8v4l3 3"></path>
+            <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
+            <circle cx="12" cy="12" r="1" fill="currentColor"></circle>
+        </svg>
+    </button>
+
+    <footer class="site-footer">
+        <div class="footer-shell glass-panel">
+            <div class="footer-kicker">Phishing XAI Analyzer</div>
+            <p class="footer-disclaimer">Los veredictos y probabilidades mostrados son el resultado de modelos de machine learning entrenados y evaluados con validaci&oacute;n cruzada de 5 folds sobre datos reales etiquetados. La confianza reportada refleja la probabilidad calibrada del modelo, no una certeza absoluta &mdash; el rendimiento puede variar ante asuntos fuera de la distribuci&oacute;n de entrenamiento o en idiomas y contextos no representados en el dataset. El cuerpo de correo reconstruido es contenido sint&eacute;tico generado por LLM con fines de contextualizaci&oacute;n: no es un correo real ni debe utilizarse como evidencia forense.</p>
+            <p class="footer-tech-label">Tecnolog&iacute;as usadas</p>
+            <div class="footer-stack" aria-label="Technology stack">
+                <span class="footer-pill">Cargando...</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js?v=20260416d"></script>
+</body>
+</html>

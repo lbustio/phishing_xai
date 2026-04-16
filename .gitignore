@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter and editor noise
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.code-workspace
+
+# Local environments
+.venv/
+venv/
+env/
+.env
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Local secrets
+secrets/
+*.key
+*.pem
+
+# Temporary or backup files
+*.log
+*.tmp
+*.bak
+*.bck
+
+# Experiment artifacts and model caches
+results/
+
+# Non-distributable datasets
+data/*
+!data/.gitkeep
+
+# Deploy bundle artifacts for public demo packaging
+deploy/bundle/*
+!deploy/bundle/.gitkeep
+!deploy/bundle/deploy_bundle.json
+!deploy/bundle/model.joblib
+!deploy/bundle/model_metadata.json
+!deploy/bundle/run_manifest.json

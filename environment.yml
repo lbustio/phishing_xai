@@ -1,0 +1,56 @@
+name: xai
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+
+  # Scientific computing core
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+  - matplotlib
+  - joblib
+
+  # System monitoring
+  - psutil
+
+  # Deep learning runtime (CPU-only build)
+  - pytorch>=2.6.0
+  - cpuonly
+  - cmake
+
+  # Required by SHAP (JIT compilation)
+  - numba
+
+  # Explainability
+  - shap
+
+  - pip:
+      # Infrastructure & API
+      - fastapi
+      - uvicorn[standard]
+      - pydantic
+      - requests
+
+      # Embeddings & model backends
+      - transformers
+      - sentence-transformers
+      - huggingface_hub
+      - accelerate
+
+      # Intelligence & XAI
+      - lime
+      - langdetect
+      - groq
+      - tenacity
+
+      # Demo & reporting
+      - jinja2
+      # Plotly is loaded in the browser from CDN; not required as a Python package.
+
+variables:
+  XAI_SECRETS_DIR: ./secrets

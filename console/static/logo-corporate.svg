@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="corpShield" x1="118" y1="92" x2="392" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E8F2FF"/>
+      <stop offset="0.45" stop-color="#7DB3FF"/>
+      <stop offset="1" stop-color="#1B3D73"/>
+    </linearGradient>
+    <linearGradient id="corpAccent" x1="182" y1="178" x2="332" y2="328" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FBFF"/>
+      <stop offset="1" stop-color="#8CC4FF"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="36" y="36" width="440" height="440" rx="112" fill="#071321"/>
+  <rect x="62" y="62" width="388" height="388" rx="96" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+
+  <path d="M256 92L372 138V236C372 316.586 323.415 389.109 256 414C188.585 389.109 140 316.586 140 236V138L256 92Z" fill="url(#corpShield)"/>
+  <path d="M256 118L347 154V232C347 294.751 310.208 351.113 256 372C201.792 351.113 165 294.751 165 232V154L256 118Z" fill="#0D213C"/>
+
+  <path d="M193 246L232 285L320 197" stroke="url(#corpAccent)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M191 164H321" stroke="rgba(255,255,255,0.16)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M206 334H306" stroke="rgba(255,255,255,0.16)" stroke-width="12" stroke-linecap="round"/>
+</svg>

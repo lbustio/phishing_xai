@@ -1,0 +1,2090 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const subjectInput = document.getElementById('subjectInput');
+    const loader = document.getElementById('loader');
+    const loaderMessage = document.getElementById('loaderMessage');
+    const progressBar = document.querySelector('.progress');
+    const resultsSection = document.getElementById('resultsSection');
+    
+    // UI Elements map
+    const xaiPanel = document.getElementById('xaiPanel');
+    const threatIcon = document.getElementById('threatIcon');
+    const threatTitle = document.getElementById('threatTitle');
+    const threatConfidence = document.getElementById('threatConfidence');
+    const naturalExplanation = document.getElementById('naturalExplanation');
+    const semanticReasoningText = document.getElementById('semanticReasoningText');
+    const keywordChips = document.getElementById('keywordChips');
+    const emailSubjectPrev = document.getElementById('emailSubjectPrev');
+    const emailBodySim = document.getElementById('emailBodySim');
+    const semanticPanel = document.getElementById('semanticPanel');
+    const semanticPlot = document.getElementById('semanticPlot');
+    const semanticInterpretation = document.getElementById('semanticInterpretation');
+    const semanticNote = document.getElementById('semanticNote');
+    const nearestPhishingMetric = document.getElementById('nearestPhishingMetric');
+    const nearestLegitimateMetric = document.getElementById('nearestLegitimateMetric');
+    const centroidMetrics = document.getElementById('centroidMetrics');
+    const semanticNeighborSummary = document.getElementById('semanticNeighborSummary');
+    const hoverDetails = document.getElementById('hoverDetails');
+    const semanticDebug = document.getElementById('semanticDebug');
+    const neighborCountInput = document.getElementById('neighborCount');
+    const neighborCountValue = document.getElementById('neighborCountValue');
+    const semanticModeBtn = document.getElementById('semanticModeBtn');
+
+    const logTerminal = document.getElementById('logTerminal');
+    const logContent = document.getElementById('logContent');
+
+    const resultActions = document.getElementById('resultActions');
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
+
+    const historySidebar = document.getElementById('historySidebar');
+    const historyList = document.getElementById('historyList');
+    const openHistoryBtn = document.getElementById('openHistory');
+    const closeHistoryBtn = document.getElementById('closeHistory');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const historyModalOverlay = document.getElementById('historyModalOverlay');
+    const closeHistoryModalBtn = document.getElementById('closeHistoryModal');
+    const exportHistoryPdfBtn = document.getElementById('exportHistoryPdfBtn');
+
+    const historyView = {
+        xaiPanel: document.getElementById('historyXaiPanel'),
+        threatIcon: document.getElementById('historyThreatIcon'),
+        threatTitle: document.getElementById('historyThreatTitle'),
+        threatConfidence: document.getElementById('historyThreatConfidence'),
+        naturalExplanation: document.getElementById('historyNaturalExplanation'),
+        semanticReasoningText: document.getElementById('historySemanticReasoningText'),
+        keywordChips: document.getElementById('historyKeywordChips'),
+        emailSubjectPrev: document.getElementById('historyEmailSubjectPrev'),
+        emailBodySim: document.getElementById('historyEmailBodySim'),
+    };
+
+    const historySemanticView = {
+        panel: document.getElementById('historySemanticPanel'),
+        plot: document.getElementById('historySemanticPlot'),
+        interpretation: document.getElementById('historySemanticInterpretation'),
+        note: document.getElementById('historySemanticNote'),
+        nearestPhishingMetric: document.getElementById('historyNearestPhishingMetric'),
+        nearestLegitimateMetric: document.getElementById('historyNearestLegitimateMetric'),
+        centroidMetrics: document.getElementById('historyCentroidMetrics'),
+        neighborSummary: document.getElementById('historySemanticNeighborSummary'),
+        hoverDetails: document.getElementById('historyHoverDetails'),
+        debug: document.getElementById('historySemanticDebug'),
+    };
+
+    const soundToggle = document.getElementById('soundToggleFloating') || document.getElementById('soundToggle');
+    const soundIcon = document.getElementById('soundIconFloating') || document.getElementById('soundIcon');
+    let runtimeTechnologies = [];
+
+    // ── New feature elements ────────────────────────────────────────
+    const sessionStats       = document.getElementById('sessionStats');
+    const statTotal          = document.getElementById('statTotal');
+    const statPhishing       = document.getElementById('statPhishing');
+    const statLegit          = document.getElementById('statLegit');
+    const statRate           = document.getElementById('statRate');
+    const statAvgConf        = document.getElementById('statAvgConf');
+    const statFeedback       = document.getElementById('statFeedback');
+
+    const emailPasteToggle   = document.getElementById('emailPasteToggle');
+    const emailPasteArea     = document.getElementById('emailPasteArea');
+    const emailPasteInput    = document.getElementById('emailPasteInput');
+    const emailParsePreview  = document.getElementById('emailParsePreview');
+    const parsedSubject      = document.getElementById('parsedSubject');
+
+    const langWarning        = document.getElementById('langWarning');
+    const counterfactualBox  = document.getElementById('counterfactualBox');
+    const counterfactualText = document.getElementById('counterfactualText');
+
+    const similarCasesPanel  = document.getElementById('similarCasesPanel');
+    const similarCasesList   = document.getElementById('similarCasesList');
+
+    const feedbackCorrectBtn = document.getElementById('feedbackCorrectBtn');
+    const feedbackWrongBtn   = document.getElementById('feedbackWrongBtn');
+    const feedbackStatus     = document.getElementById('feedbackStatus');
+
+    const exportJsonBtn      = document.getElementById('exportJsonBtn');
+    const exportCsvBtn       = document.getElementById('exportCsvBtn');
+
+    const attackPatternsBtn     = document.getElementById('attackPatternsBtn');
+    const attackPatternsOverlay = document.getElementById('attackPatternsOverlay');
+    const closeAttackPatterns   = document.getElementById('closeAttackPatterns');
+    const apPhishingList        = document.getElementById('apPhishingList');
+    const apLegitList           = document.getElementById('apLegitList');
+
+    // --- Config Loading ---
+    async function loadConfig() {
+        try {
+            const res = await fetch('/api/config');
+            const config = await res.json();
+
+            // Footer pills — populate all footer-stack elements dynamically
+            runtimeTechnologies = Array.isArray(config.technologies_used)
+                ? [...config.technologies_used]
+                : [];
+            if (runtimeTechnologies.length > 0) {
+                const pillsHtml = runtimeTechnologies
+                    .map(item => `<span class="footer-pill">${item}</span>`)
+                    .join('');
+                document.querySelectorAll('.footer-stack').forEach(el => {
+                    el.innerHTML = pillsHtml;
+                });
+            }
+
+            // ── Model Info Card ──────────────────────────────────
+            const card = document.getElementById('modelInfoCard');
+            if (!card || !config.embedding) return;
+            card.classList.remove('hidden');
+
+            // Summary pills
+            const embShortFull = (config.embedding || '').split('/').pop();
+            const f1Pct = config.metrics ? (config.metrics.f1_macro * 100).toFixed(2) + '% F1' : '—';
+            const hwShort = (config.hardware || '').replace(/^⚙️\s*/, '').replace(/^⚠️\s*FALLBACK:\s*/, '⚠️ ');
+            document.getElementById('micEmbPill').textContent = embShortFull;
+            document.getElementById('micClfPill').textContent = config.classifier;
+            document.getElementById('micF1Pill').textContent = f1Pct;
+            document.getElementById('micHwPill').textContent = hwShort;
+
+            // Toggle expand/collapse
+            const toggleBtn = document.getElementById('micToggleBtn');
+            const detailPanel = document.getElementById('micDetail');
+            toggleBtn.addEventListener('click', () => {
+                const isOpen = detailPanel.classList.toggle('open');
+                toggleBtn.classList.toggle('open', isOpen);
+                document.getElementById('micToggleLabel').textContent = isOpen ? 'Ocultar' : 'Ver detalles';
+            });
+
+            // Helper to render a key-value row
+            function kv(id, label, value) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (value == null || value === '') { el.innerHTML = ''; return; }
+                el.innerHTML = `<span class="kv-label">${label}</span><span class="kv-val">${value}</span>`;
+            }
+
+            // ── Embedding section ────────────────────────────────
+            const ed = config.embedding_details || {};
+            kv('micEmbName',     'Modelo',        config.embedding);
+            kv('micEmbParadigm', 'Paradigma',     ed.paradigm);
+            kv('micEmbType',     'Backend',       ed.type);
+            kv('micEmbBatch',    'Batch size',    ed.batch_size);
+            kv('micEmbSize',     'Tamaño en HF',  ed.hf_cache_size_mb != null ? `${ed.hf_cache_size_mb} MB` : null);
+            kv('micEmbDownload', 'Descargado',    ed.hf_download_date);
+            if (ed.hf_url) {
+                document.getElementById('micEmbUrl').innerHTML =
+                    `<span class="kv-label">HuggingFace</span><span class="kv-val"><a href="${ed.hf_url}" target="_blank" rel="noopener">${ed.hf_url}</a></span>`;
+            }
+            if (ed.rationale) {
+                document.getElementById('micEmbRationale').textContent = '📌 Por qué este modelo: ' + ed.rationale;
+            }
+
+            // ── Classifier section ───────────────────────────────
+            const cd = config.classifier_details || {};
+            kv('micClfName',   'Clase',             cd.class_name || config.classifier);
+            const paramsStr = cd.best_params && Object.keys(cd.best_params).length
+                ? Object.entries(cd.best_params).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ')
+                : null;
+            kv('micClfParams', 'Params óptimos',    paramsStr);
+            kv('micModelSize', 'Tamaño (.joblib)',  config.model_size_mb != null ? `${config.model_size_mb} MB` : null);
+            kv('micRunDate',   'Entrenado',         config.run_created_at ? config.run_created_at.replace('T', ' ') : null);
+            kv('micRunDevice', 'Dispositivo',       config.run_device ? config.run_device.toUpperCase() : null);
+            if (cd.note) {
+                document.getElementById('micClfRationale').textContent = '📌 Por qué este clasificador: ' + cd.note;
+            }
+
+            // ── Metrics section ──────────────────────────────────
+            const m = config.metrics || {};
+            const metricsDefs = [
+                { label: 'F1-macro',    val: m.f1_macro,        std: m.f1_macro_std },
+                { label: 'F1-weighted', val: m.f1_weighted,     std: null },
+                { label: 'Accuracy',    val: m.accuracy,        std: null },
+                { label: 'Precision',   val: m.precision_macro, std: null },
+                { label: 'Recall',      val: m.recall_macro,    std: null },
+                { label: 'ROC-AUC',     val: m.roc_auc,         std: null },
+            ];
+            const mgrid = document.getElementById('micMetricsGrid');
+            mgrid.innerHTML = metricsDefs.map(d => {
+                if (d.val == null) return '';
+                const pct = (d.val * 100).toFixed(2) + '%';
+                const stdHtml = d.std != null ? `<span class="m-std"> ±${(d.std * 100).toFixed(2)}%</span>` : '';
+                return `<div class="mic-metric-item">
+                    <span class="m-label">${d.label}</span>
+                    <span class="m-val">${pct}</span>${stdHtml}
+                </div>`;
+            }).join('');
+            if (config.selection_reason) {
+                document.getElementById('micSelectionReason').textContent = '✅ ' + config.selection_reason;
+            }
+
+            // ── Ranking table ────────────────────────────────────
+            const tbody = document.querySelector('#micRankingTable tbody');
+            if (tbody && Array.isArray(config.top_candidates)) {
+                tbody.innerHTML = config.top_candidates.map(c => {
+                    const activeClass = c.active ? 'mic-row-active' : '';
+                    const embDisp = (c.embedding || '').length > 35
+                        ? '…' + c.embedding.slice(-35) : c.embedding;
+                    return `<tr class="${activeClass}">
+                        <td>${c.rank}</td>
+                        <td class="mic-td-emb" title="${c.embedding}">${embDisp}</td>
+                        <td class="mic-td-clf">${c.classifier}</td>
+                        <td class="mic-td-num">${(c.f1_macro * 100).toFixed(2)}%</td>
+                        <td class="mic-td-num">${(c.accuracy * 100).toFixed(2)}%</td>
+                        <td class="mic-td-num">${(c.roc_auc * 100).toFixed(2)}%</td>
+                    </tr>`;
+                }).join('');
+            }
+
+        } catch (err) {
+            console.error("Failed to load config", err);
+        }
+    }
+    loadConfig();
+
+    // ── Stats Dashboard ─────────────────────────────────────────────
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/stats');
+            if (!res.ok) return;
+            const s = await res.json();
+            if (!sessionStats) return;
+            if (s.total === 0) { sessionStats.classList.add('hidden'); return; }
+            sessionStats.classList.remove('hidden');
+            if (statTotal)    statTotal.textContent    = s.total ?? 0;
+            if (statPhishing) statPhishing.textContent = s.phishing ?? 0;
+            if (statLegit)    statLegit.textContent    = s.legitimate ?? s.legit ?? 0;
+            if (statRate)     statRate.textContent     = s.phishing_rate != null ? `${s.phishing_rate.toFixed(1)}%` : '—';
+            if (statAvgConf)  statAvgConf.textContent  = s.avg_confidence != null ? `${s.avg_confidence.toFixed(1)}%` : '—';
+            if (statFeedback) statFeedback.textContent = s.feedback_correct != null
+                ? `${s.feedback_correct}✓ ${s.feedback_incorrect ?? 0}✗`
+                : '—';
+        } catch (err) {
+            console.warn('loadStats error:', err);
+        }
+    }
+    loadStats();
+
+    // ── Counterfactual rendering ────────────────────────────────────
+    function renderCounterfactual(data) {
+        if (!counterfactualBox || !counterfactualText) return;
+        const cf = data?.counterfactual;
+        if (!cf) { counterfactualBox.classList.add('hidden'); return; }
+        counterfactualBox.classList.remove('hidden');
+        if (cf.flips_verdict) {
+            counterfactualBox.className = 'counterfactual-box cf-flip';
+            counterfactualText.innerHTML =
+                `Eliminando <strong>"${escapeHtml(cf.word)}"</strong> el veredicto cambia: ` +
+                `${escapeHtml(cf.original_label)} (${cf.original_prob}%) → ${escapeHtml(cf.new_label)} (${cf.new_prob}%).`;
+        } else {
+            counterfactualBox.className = 'counterfactual-box cf-no-flip';
+            counterfactualText.innerHTML =
+                `Ninguna palabra individual cambia el veredicto. La palabra más influyente es ` +
+                `<strong>"${escapeHtml(cf.word)}"</strong>: su eliminación llevaría P(phishing) de ` +
+                `${cf.original_prob}% a ${cf.new_prob}%.`;
+        }
+    }
+
+    // ── Language warning rendering ──────────────────────────────────
+    function renderLangWarning(data) {
+        if (!langWarning) return;
+        if (data?.lang_warning) {
+            langWarning.textContent = data.lang_warning;
+            langWarning.classList.remove('hidden');
+        } else {
+            langWarning.classList.add('hidden');
+        }
+    }
+
+    // ── Similar cases ───────────────────────────────────────────────
+    async function renderSimilarCases(subject) {
+        if (!similarCasesPanel || !similarCasesList) return;
+        try {
+            const res = await fetch('/api/similar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject }),
+            });
+            if (!res.ok) { similarCasesPanel.classList.add('hidden'); return; }
+            const cases = await res.json();
+            if (!Array.isArray(cases) || cases.length === 0) {
+                similarCasesPanel.classList.add('hidden');
+                return;
+            }
+            similarCasesPanel.classList.remove('hidden');
+            similarCasesList.innerHTML = cases.map(c => `
+                <div class="similar-case-card ${c.status}">
+                    <span class="sc-status">${c.status}</span>
+                    <span class="sc-sim">${(c.similarity * 100).toFixed(1)}% similar</span>
+                    <div class="sc-subject">${escapeHtml(c.subject || '')}</div>
+                    <div class="sc-conf">${Number(c.confidence).toFixed(1)}% certeza</div>
+                </div>
+            `).join('');
+        } catch (err) {
+            console.warn('renderSimilarCases error:', err);
+            similarCasesPanel.classList.add('hidden');
+        }
+    }
+
+    // ── Feedback loop ───────────────────────────────────────────────
+    let currentFeedbackIndex = null;
+
+    async function sendFeedback(verdict) {
+        if (currentFeedbackIndex === null) return;
+        if (feedbackStatus) feedbackStatus.textContent = 'Enviando...';
+        try {
+            const res = await fetch(`/api/feedback/${currentFeedbackIndex}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feedback: verdict }),
+            });
+            if (res.ok) {
+                if (feedbackStatus) feedbackStatus.textContent = verdict === 'correct' ? '✓ Marcado como correcto' : '✗ Marcado como incorrecto';
+                if (feedbackCorrectBtn) feedbackCorrectBtn.disabled = true;
+                if (feedbackWrongBtn)   feedbackWrongBtn.disabled   = true;
+                loadStats();
+            } else {
+                if (feedbackStatus) feedbackStatus.textContent = 'Error al guardar.';
+            }
+        } catch (err) {
+            if (feedbackStatus) feedbackStatus.textContent = 'Error de conexión.';
+            console.warn('sendFeedback error:', err);
+        }
+    }
+
+    feedbackCorrectBtn?.addEventListener('click', () => sendFeedback('correct'));
+    feedbackWrongBtn?.addEventListener('click',   () => sendFeedback('incorrect'));
+
+    // ── Email paste toggle ──────────────────────────────────────────
+    emailPasteToggle?.addEventListener('click', () => {
+        if (!emailPasteArea) return;
+        const isHidden = emailPasteArea.classList.toggle('hidden');
+        emailPasteToggle.textContent = isHidden ? '📋 Pegar email completo' : '▲ Ocultar';
+    });
+
+    emailPasteInput?.addEventListener('input', () => {
+        const raw = emailPasteInput.value;
+        const subjectMatch = raw.match(/^(?:Subject|Asunto|Tema):\s*(.+)$/im);
+        if (subjectMatch) {
+            const extracted = subjectMatch[1].trim();
+            subjectInput.value = extracted;
+            if (parsedSubject)      parsedSubject.textContent = extracted;
+            if (emailParsePreview)  emailParsePreview.classList.remove('hidden');
+        } else {
+            if (emailParsePreview) emailParsePreview.classList.add('hidden');
+        }
+    });
+
+    // ── JSON / CSV export ───────────────────────────────────────────
+    exportJsonBtn?.addEventListener('click', () => {
+        if (!lastResult) return;
+        const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `xai_result_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    exportCsvBtn?.addEventListener('click', () => {
+        if (!lastResult) return;
+        const r = lastResult;
+        const kwWords = (r.keywords || []).map(k => k.word).join('; ');
+        const kwDeltas = (r.keywords || []).map(k => k.delta_pp != null ? `${k.delta_pp}pp` : '').join('; ');
+        const headers = ['subject','status','confidence','explanation','keywords','keyword_deltas','counterfactual_word','counterfactual_flip','timestamp'];
+        const cf = r.counterfactual || {};
+        const row = [
+            `"${(r.subject || '').replace(/"/g,'""')}"`,
+            r.status || '',
+            r.confidence != null ? Number(r.confidence).toFixed(2) : '',
+            `"${(r.explanation || '').replace(/"/g,'""')}"`,
+            `"${kwWords}"`,
+            `"${kwDeltas}"`,
+            cf.word || '',
+            cf.flips_verdict != null ? String(cf.flips_verdict) : '',
+            r.timestamp || new Date().toISOString(),
+        ];
+        const csv  = headers.join(',') + '\n' + row.join(',');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `xai_result_${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // ── Attack patterns overlay ─────────────────────────────────────
+    function buildAttackPatterns() {
+        const phishingMap = {};
+        const legitMap    = {};
+
+        function accumulate(keywords, isPhishing) {
+            (keywords || []).forEach(kw => {
+                const word   = kw.word;
+                const delta  = kw.delta_pp != null ? Math.abs(kw.delta_pp) : 0;
+                const target = isPhishing ? phishingMap : legitMap;
+                if (!target[word]) target[word] = { count: 0, delta: 0 };
+                target[word].count++;
+                target[word].delta += delta;
+            });
+        }
+
+        if (lastResult) {
+            accumulate(lastResult.keywords, lastResult.status === 'phishing');
+        }
+
+        function renderList(el, map) {
+            if (!el) return;
+            const sorted = Object.entries(map).sort((a, b) => b[1].delta - a[1].delta).slice(0, 20);
+            if (sorted.length === 0) { el.innerHTML = '<li class="ap-empty">Sin datos suficientes.</li>'; return; }
+            el.innerHTML = sorted.map(([word, info]) =>
+                `<li class="ap-item"><span class="ap-word">${escapeHtml(word)}</span><span class="ap-delta">Δ${info.delta.toFixed(1)}pp · ×${info.count}</span></li>`
+            ).join('');
+        }
+
+        renderList(apPhishingList, phishingMap);
+        renderList(apLegitList,    legitMap);
+    }
+
+    attackPatternsBtn?.addEventListener('click', () => {
+        buildAttackPatterns();
+        attackPatternsOverlay?.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    });
+
+    closeAttackPatterns?.addEventListener('click', () => {
+        attackPatternsOverlay?.classList.add('hidden');
+        document.body.style.overflow = '';
+    });
+
+    attackPatternsOverlay?.addEventListener('click', (e) => {
+        if (e.target === attackPatternsOverlay) {
+            attackPatternsOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    });
+
+        // Audio Engine using Web Audio API
+    class AudioEngine {
+        constructor() {
+            this.ctx = null;
+            this.muted = localStorage.getItem('xai_muted') === 'true';
+            this.updateUI();
+        }
+
+        init() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        toggle() {
+            this.muted = !this.muted;
+            localStorage.setItem('xai_muted', this.muted);
+            this.updateUI();
+        }
+
+        updateUI() {
+            if (this.muted) {
+                soundToggle.classList.add('muted');
+                soundIcon.textContent = '🔇';
+            } else {
+                soundToggle.classList.remove('muted');
+                soundIcon.textContent = '🔊';
+            }
+        }
+
+        playAlarm() {
+            if (this.muted) return;
+            this.init();
+            const now = this.ctx.currentTime;
+            for(let i=0; i<3; i++) {
+                const t = now + (i * 0.4);
+                this.beep(880, t, 0.2, 'sawtooth');
+                this.beep(660, t + 0.2, 0.2, 'sawtooth');
+            }
+        }
+
+        playSafe() {
+            if (this.muted) return;
+            this.init();
+            const now = this.ctx.currentTime;
+            this.beep(440, now, 0.4, 'sine', 0.1);
+            this.beep(554.37, now + 0.1, 0.4, 'sine', 0.08);
+            this.beep(659.25, now + 0.2, 0.4, 'sine', 0.06);
+        }
+
+        beep(freq, start, duration, type, volume = 0.2) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, start);
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(volume, start + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, start + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(start);
+            osc.stop(start + duration);
+        }
+    }
+
+    const audio = new AudioEngine();
+
+    soundToggle.addEventListener('click', () => {
+        audio.toggle();
+    });
+
+    analyzeBtn.addEventListener('click', () => {
+        audio.init(); 
+        analyzeSubject();
+    });
+    subjectInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            audio.init();
+            analyzeSubject();
+        }
+    });
+
+    const cancelBtn = document.getElementById('cancelBtn');
+    let analysisController = null;
+    let lastResult = null;
+    let activeHistoryResult = null;
+
+    cancelBtn.addEventListener('click', () => {
+        if (analysisController) {
+            analysisController.abort();
+            addLogEntry("🛑 Análisis cancelado por el usuario.");
+        }
+    });
+
+    async function analyzeSubject() {
+        const subject = subjectInput.value.trim();
+        if (!subject) return;
+
+        analysisController = new AbortController();
+        const signal = analysisController.signal;
+
+        resultsSection.classList.add('hidden');
+        resultActions.classList.add('hidden');
+        logTerminal.classList.remove('hidden');
+        logContent.innerHTML = '';
+        analyzeBtn.disabled = true;
+        setSemanticDebug('Solicitud iniciada. Esperando respuesta del backend para el mapa semántico.');
+        
+        loader.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        loaderMessage.textContent = "Iniciando conexión...";
+
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject }),
+                signal: signal
+            });
+
+            if(!response.ok) throw new Error("Error en el servidor");
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let resultData = null;
+            let streamBuffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    const tail = streamBuffer.trim();
+                    if (tail) {
+                        try {
+                            const payload = JSON.parse(tail);
+                            if (payload.type === 'log') {
+                                addLogEntry(payload.content);
+                            } else if (payload.type === 'result') {
+                                resultData = payload.data;
+                                const pointCount = resultData?.semantic_map?.points?.length;
+                                if (pointCount) {
+                                    setSemanticDebug(`Respuesta recibida al cerrar stream. El backend entregó ${pointCount} puntos semánticos.`);
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error parsing final buffered stream chunk:', e, tail.slice(0, 400));
+                            setSemanticDebug('El stream terminó con un fragmento JSON incompleto o inválido.');
+                        }
+                    }
+                    break;
+                }
+                
+                streamBuffer += decoder.decode(value, { stream: true });
+                const lines = streamBuffer.split('\n');
+                streamBuffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const payload = JSON.parse(line);
+                        if (payload.type === 'log') {
+                            addLogEntry(payload.content);
+                            if ((payload.content || '').toLowerCase().includes('mapa semántico')
+                                || (payload.content || '').toLowerCase().includes('payload semántico')
+                                || (payload.content || '').toLowerCase().includes('frontend')) {
+                                setSemanticDebug(`Backend: ${payload.content}`);
+                            }
+                        } else if (payload.type === 'result') {
+                            resultData = payload.data;
+                            const pointCount = resultData?.semantic_map?.points?.length;
+                            if (pointCount) {
+                                setSemanticDebug(`Respuesta recibida. El backend entregó ${pointCount} puntos semánticos.`);
+                            } else if (resultData?.semantic_error) {
+                                setSemanticDebug(`Respuesta recibida sin mapa. Error reportado: ${resultData.semantic_error}`);
+                            } else {
+                                setSemanticDebug('Respuesta recibida sin mapa semántico y sin detalle adicional.');
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error parsing stream chunk:", e, line.slice(0, 400));
+                        setSemanticDebug('Se detectó un fragmento NDJSON inválido durante la recepción del análisis.');
+                    }
+                }
+            }
+            
+            progressBar.style.width = '100%';
+            loaderMessage.textContent = "Análisis Completado";
+            
+            if (resultData) {
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    displayResults(resultData);
+                    analyzeBtn.disabled = false;
+                }, 800);
+            }
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                loaderMessage.textContent = "Análisis Cancelado.";
+                progressBar.style.background = "#6b7280";
+            } else {
+                addLogEntry("❌ ERROR: " + error.message);
+                loaderMessage.textContent = "Error de conexión.";
+                progressBar.style.background = "#ef4444";
+            }
+            
+            setTimeout(() => { 
+                analyzeBtn.disabled = false; 
+                loader.classList.add('hidden');
+            }, 1500);
+            console.error(error);
+        } finally {
+            analysisController = null;
+        }
+    }
+
+    function addLogEntry(text) {
+        const now = new Date();
+        const ts = now.getFullYear()
+            + '-' + String(now.getMonth() + 1).padStart(2, '0')
+            + '-' + String(now.getDate()).padStart(2, '0')
+            + ' ' + String(now.getHours()).padStart(2, '0')
+            + ':' + String(now.getMinutes()).padStart(2, '0')
+            + ':' + String(now.getSeconds()).padStart(2, '0');
+
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+
+        const tsSpan = document.createElement('span');
+        tsSpan.className = 'log-ts';
+        tsSpan.textContent = ts;
+
+        const msgSpan = document.createElement('span');
+        msgSpan.className = 'log-msg';
+        msgSpan.textContent = ` > ${text}`;
+
+        entry.appendChild(tsSpan);
+        entry.appendChild(msgSpan);
+        logContent.appendChild(entry);
+
+        // Auto-scroll only if user is already near the bottom
+        const atBottom = logContent.scrollHeight - logContent.scrollTop - logContent.clientHeight < 60;
+        if (atBottom) {
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // Sync loader message with latest log
+        loaderMessage.textContent = text;
+    }
+
+    let semanticState = {
+        data: null,
+        neighborCount: Number(neighborCountInput?.value || 5),
+        neighborsOnly: false,
+    };
+    let historySemanticState = {
+        data: null,
+        neighborCount: 5,
+        neighborsOnly: false,
+    };
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatMetric(value, digits = 3) {
+        const num = Number(value);
+        return Number.isFinite(num) ? num.toFixed(digits) : 'N/D';
+    }
+
+    function buildSemanticNarrative(semanticMap) {
+        if (!semanticMap) return '';
+
+        const neighborSummary = semanticMap.neighbor_summary || {};
+        const dominant = neighborSummary.dominant_label === 'phishing' ? 'phishing' : 'legítimos';
+        const nearestPhishing = Number(semanticMap?.nearest_by_class?.phishing?.distance);
+        const nearestLegitimate = Number(semanticMap?.nearest_by_class?.legitimate?.distance);
+        const centroidPhishing = Number(semanticMap?.centroid_distances?.phishing);
+        const centroidLegitimate = Number(semanticMap?.centroid_distances?.legitimate);
+
+        const localClause = `En el mapa semántico, el asunto cae en un vecindario dominado por ejemplos ${dominant}.`;
+        const neighborClause = Number.isFinite(neighborSummary.k)
+            ? ` Entre sus ${neighborSummary.k} vecinos más cercanos, ${neighborSummary.phishing ?? 0} son phishing y ${neighborSummary.legitimate ?? 0} son legítimos.`
+            : '';
+
+        let nearestClause = '';
+        if (Number.isFinite(nearestPhishing) && Number.isFinite(nearestLegitimate)) {
+            nearestClause = nearestPhishing <= nearestLegitimate
+                ? ` El punto phishing más cercano queda a distancia coseno ${formatMetric(nearestPhishing)}, menor que la distancia al punto legítimo más cercano (${formatMetric(nearestLegitimate)}).`
+                : ` El punto legítimo más cercano queda a distancia coseno ${formatMetric(nearestLegitimate)}, menor que la distancia al punto phishing más cercano (${formatMetric(nearestPhishing)}).`;
+        }
+
+        let centroidClause = '';
+        if (Number.isFinite(centroidPhishing) && Number.isFinite(centroidLegitimate)) {
+            centroidClause = centroidPhishing <= centroidLegitimate
+                ? ` También queda más próximo al centroide phishing (${formatMetric(centroidPhishing)}) que al centroide legítimo (${formatMetric(centroidLegitimate)}).`
+                : ` También queda más próximo al centroide legítimo (${formatMetric(centroidLegitimate)}) que al centroide phishing (${formatMetric(centroidPhishing)}).`;
+        }
+
+        return `${localClause}${neighborClause}${nearestClause}${centroidClause}`.trim();
+    }
+
+    function setSemanticDebug(message, targetDebug = semanticDebug) {
+        if (targetDebug) {
+            targetDebug.textContent = message;
+        }
+        console.info(`[semantic] ${message}`);
+    }
+
+    function getPointByIndex(points, index) {
+        return Array.isArray(points) ? points.find(point => point.id === index) : null;
+    }
+
+    function updateHoverCard(point, targetHoverDetails = hoverDetails) {
+        if (!targetHoverDetails) return;
+
+        if (!point) {
+            targetHoverDetails.textContent = 'Pasa el mouse sobre un punto para ver el asunto, su clase y su semejanza con el asunto analizado.';
+            return;
+        }
+
+        const label = point.label === 'phishing' ? 'Phishing' : 'Legítimo';
+        const rank = point.neighbor_rank > 0 ? ` | vecino #${point.neighbor_rank}` : '';
+        targetHoverDetails.innerHTML = `
+            <strong>${label}</strong> | similitud coseno ${formatMetric(point.similarity)} | distancia ${formatMetric(point.distance)}${rank}
+            <br>
+            <span>${escapeHtml(point.subject_preview || point.subject || '')}</span>
+        `;
+    }
+
+    function buildPointHoverText(point) {
+        const label = point.label === 'phishing' ? 'Phishing' : 'Legítimo';
+        const rank = point.neighbor_rank > 0 ? `<br>Rango local: #${point.neighbor_rank}` : '';
+        return `<b>${label}</b><br>${escapeHtml(point.subject_preview || point.subject || '')}<br>Similitud coseno: ${formatMetric(point.similarity)}<br>Distancia coseno: ${formatMetric(point.distance)}${rank}`;
+    }
+
+    function renderSemanticMap(semanticMap, semanticError = null) {
+        const isNewPayload = semanticState.data !== semanticMap;
+        semanticState.data = semanticMap || null;
+        if (!semanticMap) {
+            semanticPanel.classList.remove('hidden');
+            setSemanticDebug(semanticError ? `No renderizado. Error del backend: ${semanticError}` : 'No renderizado. El backend no devolvió semantic_map.');
+            semanticInterpretation.textContent = 'No fue posible construir el mapa semántico interactivo para esta ejecución.';
+            semanticNote.textContent = semanticError
+                ? `Detalle del backend: ${semanticError}`
+                : 'El backend no devolvió datos semánticos. Revisa que el dataset fuente del run y sus artefactos estén disponibles localmente.';
+            semanticPlot.innerHTML = '<div class="semantic-placeholder">El servidor no pudo generar el scatter semántico con datos reales.</div>';
+            semanticNeighborSummary.textContent = 'Sin datos.';
+            nearestPhishingMetric.textContent = 'Sin datos.';
+            nearestLegitimateMetric.textContent = 'Sin datos.';
+            centroidMetrics.textContent = 'Sin datos.';
+            updateHoverCard(null);
+            console.warn('semantic_map ausente en la respuesta del análisis.');
+            return;
+        }
+        if (!window.Plotly) {
+            semanticPanel.classList.remove('hidden');
+            setSemanticDebug('No renderizado. Plotly no está disponible en window.');
+            semanticInterpretation.textContent = semanticMap.interpretation || 'La visualización semántica no pudo renderizarse en el navegador.';
+            semanticNote.textContent = 'Los datos del mapa sí llegaron, pero Plotly no se cargó. Esto suele indicar que el CDN fue bloqueado o no estuvo disponible.';
+            semanticPlot.innerHTML = '<div class="semantic-placeholder">Plotly no se cargó en este navegador. El panel semántico requiere ese recurso para dibujar el scatter interactivo.</div>';
+            console.warn('Plotly no está disponible en window.');
+            return;
+        }
+
+        semanticPanel.classList.remove('hidden');
+        setSemanticDebug(
+            `Renderizando scatter con ${Array.isArray(semanticMap.points) ? semanticMap.points.length : 0} puntos, ${semanticState.neighborCount} vecinos resaltados y modo ${semanticState.neighborsOnly ? 'solo vecinos' : 'completo'}.`
+        );
+        semanticInterpretation.textContent = semanticMap.interpretation || 'Visualización semántica disponible.';
+        semanticNote.textContent = `${semanticMap.note || ''} Vecinos resaltados activos: ${semanticState.neighborCount}.`;
+
+        const maxNeighbors = Number(semanticMap.max_neighbor_count || 5);
+        const defaultNeighbors = Number(semanticMap.default_neighbor_count || Math.min(5, maxNeighbors));
+        neighborCountInput.max = String(Math.max(3, maxNeighbors));
+        if (isNewPayload) {
+            semanticState.neighborCount = Math.min(defaultNeighbors, maxNeighbors);
+            semanticState.neighborsOnly = false;
+        } else {
+            semanticState.neighborCount = Math.min(Math.max(3, semanticState.neighborCount), maxNeighbors);
+        }
+        neighborCountInput.value = String(semanticState.neighborCount);
+        neighborCountValue.textContent = neighborCountInput.value;
+        semanticModeBtn.textContent = semanticState.neighborsOnly ? 'Mostrar todos los puntos' : 'Mostrar solo vecinos';
+
+        const points = semanticMap.points || [];
+        const nearestPhishingIdx = semanticMap.nearest_by_class?.phishing?.index ?? -1;
+        const nearestLegitimateIdx = semanticMap.nearest_by_class?.legitimate?.index ?? -1;
+        const neighbors = points.filter(point =>
+            (point.neighbor_rank > 0 && point.neighbor_rank <= semanticState.neighborCount) ||
+            point.id === nearestPhishingIdx ||
+            point.id === nearestLegitimateIdx
+        );
+        const allPhishing = points.filter(point => point.label === 'phishing');
+        const allLegitimate = points.filter(point => point.label === 'legitimate');
+        const neighborIds = new Set(neighbors.map(point => point.id));
+        const basePhishing = allPhishing.filter(point => !neighborIds.has(point.id));
+        const baseLegitimate = allLegitimate.filter(point => !neighborIds.has(point.id));
+        const phishingNeighbors = neighbors.filter(point => point.label === 'phishing');
+        const legitimateNeighbors = neighbors.filter(point => point.label === 'legitimate');
+        const neighborLineX = [];
+        const neighborLineY = [];
+        neighbors.forEach((point) => {
+            neighborLineX.push(semanticMap.analysis_point.x, point.x, null);
+            neighborLineY.push(semanticMap.analysis_point.y, point.y, null);
+        });
+
+        const traces = [];
+        if (!semanticState.neighborsOnly) {
+            traces.push({
+                type: 'scattergl',
+                mode: 'markers',
+                name: 'Phishing',
+                x: basePhishing.map(point => point.x),
+                y: basePhishing.map(point => point.y),
+                customdata: basePhishing,
+                text: basePhishing.map(buildPointHoverText),
+                marker: {
+                    color: 'rgba(239, 68, 68, 0.16)',
+                    size: 7,
+                    line: { color: 'rgba(255,255,255,0.06)', width: 0.4 },
+                },
+                hovertemplate: '%{text}<extra></extra>',
+            });
+            traces.push({
+                type: 'scattergl',
+                mode: 'markers',
+                name: 'Legítimos',
+                x: baseLegitimate.map(point => point.x),
+                y: baseLegitimate.map(point => point.y),
+                customdata: baseLegitimate,
+                text: baseLegitimate.map(buildPointHoverText),
+                marker: {
+                    color: 'rgba(16, 185, 129, 0.14)',
+                    size: 7,
+                    line: { color: 'rgba(255,255,255,0.06)', width: 0.4 },
+                },
+                hovertemplate: '%{text}<extra></extra>',
+            });
+        }
+
+        traces.push({
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Conexiones locales',
+            x: neighborLineX,
+            y: neighborLineY,
+            line: {
+                color: 'rgba(250, 204, 21, 0.42)',
+                width: 1.4,
+            },
+            hoverinfo: 'skip',
+            showlegend: false,
+        });
+
+        traces.push({
+            type: 'scattergl',
+            mode: 'markers',
+            name: 'Vecinos phishing',
+            x: phishingNeighbors.map(point => point.x),
+            y: phishingNeighbors.map(point => point.y),
+            customdata: phishingNeighbors,
+            text: phishingNeighbors.map(buildPointHoverText),
+            marker: {
+                color: 'rgba(239, 68, 68, 0.96)',
+                size: 17,
+                symbol: 'diamond',
+                line: { color: 'rgba(255,255,255,0.85)', width: 1.4 },
+            },
+            hovertemplate: '%{text}<extra></extra>',
+        });
+        traces.push({
+            type: 'scattergl',
+            mode: 'markers',
+            name: 'Vecinos legítimos',
+            x: legitimateNeighbors.map(point => point.x),
+            y: legitimateNeighbors.map(point => point.y),
+            customdata: legitimateNeighbors,
+            text: legitimateNeighbors.map(buildPointHoverText),
+            marker: {
+                color: 'rgba(16, 185, 129, 0.96)',
+                size: 17,
+                symbol: 'diamond',
+                line: { color: 'rgba(255,255,255,0.85)', width: 1.4 },
+            },
+            hovertemplate: '%{text}<extra></extra>',
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'markers',
+            name: 'Centroide phishing',
+            x: [semanticMap.centroids.phishing.x],
+            y: [semanticMap.centroids.phishing.y],
+            customdata: [{ label: 'phishing-centroid' }],
+            marker: {
+                symbol: 'x',
+                color: 'rgba(255, 153, 153, 0.95)',
+                size: 14,
+                line: { width: 2, color: 'rgba(255,255,255,0.8)' },
+            },
+            hovertemplate: '<b>Centroide phishing</b><extra></extra>',
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'markers',
+            name: 'Centroide legítimo',
+            x: [semanticMap.centroids.legitimate.x],
+            y: [semanticMap.centroids.legitimate.y],
+            customdata: [{ label: 'legitimate-centroid' }],
+            marker: {
+                symbol: 'x',
+                color: 'rgba(167, 243, 208, 0.95)',
+                size: 14,
+                line: { width: 2, color: 'rgba(255,255,255,0.8)' },
+            },
+            hovertemplate: '<b>Centroide legítimo</b><extra></extra>',
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'markers',
+            name: 'Halo asunto analizado',
+            x: [semanticMap.analysis_point.x],
+            y: [semanticMap.analysis_point.y],
+            marker: {
+                color: 'rgba(59, 130, 246, 0.24)',
+                size: 24,
+                line: { color: 'rgba(96, 165, 250, 0.78)', width: 2.2 },
+            },
+            hoverinfo: 'skip',
+            showlegend: false,
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'markers',
+            name: 'Asunto analizado',
+            x: [semanticMap.analysis_point.x],
+            y: [semanticMap.analysis_point.y],
+            marker: {
+                color: '#2563eb',
+                size: 14,
+                line: { color: '#dbeafe', width: 2.4 },
+            },
+            hovertemplate: `<b>Asunto analizado</b><br>${escapeHtml(semanticMap.analysis_point.subject_preview || semanticMap.analysis_point.subject || '')}<extra></extra>`,
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Al centroide phishing',
+            x: [semanticMap.analysis_point.x, semanticMap.centroids.phishing.x],
+            y: [semanticMap.analysis_point.y, semanticMap.centroids.phishing.y],
+            line: { color: 'rgba(255, 120, 120, 0.9)', width: 2.5, dash: 'dash' },
+            hoverinfo: 'skip',
+            showlegend: false,
+        });
+        traces.push({
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Al centroide legítimo',
+            x: [semanticMap.analysis_point.x, semanticMap.centroids.legitimate.x],
+            y: [semanticMap.analysis_point.y, semanticMap.centroids.legitimate.y],
+            line: { color: 'rgba(110, 231, 183, 0.9)', width: 2.5, dash: 'dash' },
+            hoverinfo: 'skip',
+            showlegend: false,
+        });
+
+        const layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(4, 9, 18, 0.82)',
+            font: { color: '#e2e8f0', family: 'Inter, sans-serif' },
+            margin: { l: 48, r: 18, t: 20, b: 44 },
+            hovermode: 'closest',
+            legend: {
+                orientation: 'h',
+                y: 1.08,
+                x: 0,
+                bgcolor: 'rgba(0,0,0,0)',
+            },
+            xaxis: {
+                title: 'Componente principal 1',
+                gridcolor: 'rgba(148,163,184,0.1)',
+                zerolinecolor: 'rgba(148,163,184,0.16)',
+            },
+            yaxis: {
+                title: 'Componente principal 2',
+                gridcolor: 'rgba(148,163,184,0.1)',
+                zerolinecolor: 'rgba(148,163,184,0.16)',
+            },
+        };
+
+        const config = {
+            responsive: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+        };
+
+        Plotly.newPlot(semanticPlot, traces, layout, config);
+        setSemanticDebug(`Scatter renderizado correctamente con ${traces.length} capas visuales.`);
+
+        semanticNeighborSummary.textContent = `Entre los ${semanticState.neighborCount} vecinos más cercanos, ${neighbors.filter(point => point.label === 'phishing').length} son phishing y ${neighbors.filter(point => point.label === 'legitimate').length} son legítimos.`;
+
+        const nearestPhishing = getPointByIndex(points, semanticMap.nearest_by_class?.phishing?.index);
+        const nearestLegitimate = getPointByIndex(points, semanticMap.nearest_by_class?.legitimate?.index);
+        nearestPhishingMetric.textContent = nearestPhishing
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.phishing.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.phishing.similarity)}`
+            : 'Sin datos.';
+        nearestLegitimateMetric.textContent = nearestLegitimate
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.legitimate.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.legitimate.similarity)}`
+            : 'Sin datos.';
+        centroidMetrics.innerHTML = `
+            Phishing: ${formatMetric(semanticMap.centroid_distances?.phishing)}<br>
+            Legítimo: ${formatMetric(semanticMap.centroid_distances?.legitimate)}
+        `;
+        updateHoverCard(null);
+
+        if (typeof semanticPlot.removeAllListeners === 'function') {
+            semanticPlot.removeAllListeners('plotly_hover');
+            semanticPlot.removeAllListeners('plotly_unhover');
+        }
+        semanticPlot.on('plotly_hover', (event) => {
+            const point = event?.points?.[0]?.customdata;
+            if (point && (point.subject_preview || point.subject)) {
+                updateHoverCard(point);
+            }
+        });
+
+        semanticPlot.on('plotly_unhover', () => {
+            updateHoverCard(null);
+        });
+    }
+
+    function applySemanticReasoning(target, semanticMap) {
+        if (!target?.semanticReasoningText) return;
+
+        const narrative = buildSemanticNarrative(semanticMap);
+        if (!narrative) {
+            target.semanticReasoningText.classList.add('hidden');
+            target.semanticReasoningText.innerHTML = '';
+            return;
+        }
+
+        target.semanticReasoningText.classList.remove('hidden');
+        target.semanticReasoningText.innerHTML = `<strong>Lectura del mapa semántico:</strong> ${escapeHtml(narrative)}`;
+    }
+
+    function renderHistorySemanticMap(semanticMap, semanticError = null) {
+        const isNewPayload = historySemanticState.data !== semanticMap;
+        historySemanticState.data = semanticMap || null;
+
+        if (!semanticMap) {
+            historySemanticView.panel.classList.remove('hidden');
+            setSemanticDebug(
+                semanticError ? `Historial: error del backend: ${semanticError}` : 'Historial: no se recibió semantic_map.',
+                historySemanticView.debug,
+            );
+            historySemanticView.interpretation.textContent = 'No fue posible reconstruir el mapa semántico de este análisis archivado.';
+            historySemanticView.note.textContent = semanticError
+                ? `Detalle del backend: ${semanticError}`
+                : 'No fue posible regenerar el scatter real para este análisis archivado.';
+            historySemanticView.plot.innerHTML = '<div class="semantic-placeholder">El historial no pudo reconstruir el scatter semántico.</div>';
+            historySemanticView.neighborSummary.textContent = 'Sin datos.';
+            historySemanticView.nearestPhishingMetric.textContent = 'Sin datos.';
+            historySemanticView.nearestLegitimateMetric.textContent = 'Sin datos.';
+            historySemanticView.centroidMetrics.textContent = 'Sin datos.';
+            updateHoverCard(null, historySemanticView.hoverDetails);
+            return;
+        }
+
+        historySemanticView.panel.classList.remove('hidden');
+        historySemanticView.interpretation.textContent = semanticMap.interpretation || 'Visualización semántica disponible.';
+        historySemanticView.note.textContent = semanticMap.note || '';
+
+        const maxNeighbors = Number(semanticMap.max_neighbor_count || 5);
+        const defaultNeighbors = Number(semanticMap.default_neighbor_count || Math.min(5, maxNeighbors));
+        historySemanticState.neighborCount = isNewPayload
+            ? Math.min(defaultNeighbors, maxNeighbors)
+            : Math.min(Math.max(3, historySemanticState.neighborCount), maxNeighbors);
+        historySemanticState.neighborsOnly = false;
+
+        const points = semanticMap.points || [];
+        const nearestPhishingIdx = semanticMap.nearest_by_class?.phishing?.index ?? -1;
+        const nearestLegitimateIdx = semanticMap.nearest_by_class?.legitimate?.index ?? -1;
+        const neighbors = points.filter(point =>
+            (point.neighbor_rank > 0 && point.neighbor_rank <= historySemanticState.neighborCount) ||
+            point.id === nearestPhishingIdx ||
+            point.id === nearestLegitimateIdx
+        );
+        const allPhishing = points.filter(point => point.label === 'phishing');
+        const allLegitimate = points.filter(point => point.label === 'legitimate');
+        const neighborIds = new Set(neighbors.map(point => point.id));
+        const basePhishing = allPhishing.filter(point => !neighborIds.has(point.id));
+        const baseLegitimate = allLegitimate.filter(point => !neighborIds.has(point.id));
+        const phishingNeighbors = neighbors.filter(point => point.label === 'phishing');
+        const legitimateNeighbors = neighbors.filter(point => point.label === 'legitimate');
+        const neighborLineX = [];
+        const neighborLineY = [];
+        neighbors.forEach((point) => {
+            neighborLineX.push(semanticMap.analysis_point.x, point.x, null);
+            neighborLineY.push(semanticMap.analysis_point.y, point.y, null);
+        });
+
+        const traces = [
+            {
+                type: 'scattergl',
+                mode: 'markers',
+                name: 'Phishing',
+                x: basePhishing.map(point => point.x),
+                y: basePhishing.map(point => point.y),
+                customdata: basePhishing,
+                text: basePhishing.map(buildPointHoverText),
+                marker: {
+                    color: 'rgba(239, 68, 68, 0.16)',
+                    size: 7,
+                    line: { color: 'rgba(255,255,255,0.06)', width: 0.4 },
+                },
+                hovertemplate: '%{text}<extra></extra>',
+            },
+            {
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Conexiones locales',
+                x: neighborLineX,
+                y: neighborLineY,
+                line: {
+                    color: 'rgba(250, 204, 21, 0.42)',
+                    width: 1.4,
+                },
+                hoverinfo: 'skip',
+                showlegend: false,
+            },
+            {
+                type: 'scattergl',
+                mode: 'markers',
+                name: 'Legítimos',
+                x: baseLegitimate.map(point => point.x),
+                y: baseLegitimate.map(point => point.y),
+                customdata: baseLegitimate,
+                text: baseLegitimate.map(buildPointHoverText),
+                marker: {
+                    color: 'rgba(16, 185, 129, 0.14)',
+                    size: 7,
+                    line: { color: 'rgba(255,255,255,0.06)', width: 0.4 },
+                },
+                hovertemplate: '%{text}<extra></extra>',
+            },
+            {
+                type: 'scattergl',
+                mode: 'markers',
+                name: 'Vecinos phishing',
+                x: phishingNeighbors.map(point => point.x),
+                y: phishingNeighbors.map(point => point.y),
+                customdata: phishingNeighbors,
+                text: phishingNeighbors.map(buildPointHoverText),
+                marker: {
+                    color: 'rgba(239, 68, 68, 0.96)',
+                    size: 17,
+                    symbol: 'diamond',
+                    line: { color: 'rgba(255,255,255,0.85)', width: 1.4 },
+                },
+                hovertemplate: '%{text}<extra></extra>',
+            },
+            {
+                type: 'scattergl',
+                mode: 'markers',
+                name: 'Vecinos legítimos',
+                x: legitimateNeighbors.map(point => point.x),
+                y: legitimateNeighbors.map(point => point.y),
+                customdata: legitimateNeighbors,
+                text: legitimateNeighbors.map(buildPointHoverText),
+                marker: {
+                    color: 'rgba(16, 185, 129, 0.96)',
+                    size: 17,
+                    symbol: 'diamond',
+                    line: { color: 'rgba(255,255,255,0.85)', width: 1.4 },
+                },
+                hovertemplate: '%{text}<extra></extra>',
+            },
+            {
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Centroide phishing',
+                x: [semanticMap.centroids.phishing.x],
+                y: [semanticMap.centroids.phishing.y],
+                marker: {
+                    symbol: 'x',
+                    color: 'rgba(255, 153, 153, 0.95)',
+                    size: 14,
+                    line: { width: 2, color: 'rgba(255,255,255,0.8)' },
+                },
+                hovertemplate: '<b>Centroide phishing</b><extra></extra>',
+            },
+            {
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Centroide legítimo',
+                x: [semanticMap.centroids.legitimate.x],
+                y: [semanticMap.centroids.legitimate.y],
+                marker: {
+                    symbol: 'x',
+                    color: 'rgba(167, 243, 208, 0.95)',
+                    size: 14,
+                    line: { width: 2, color: 'rgba(255,255,255,0.8)' },
+                },
+                hovertemplate: '<b>Centroide legítimo</b><extra></extra>',
+            },
+            {
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Halo asunto analizado',
+                x: [semanticMap.analysis_point.x],
+                y: [semanticMap.analysis_point.y],
+                marker: {
+                    color: 'rgba(59, 130, 246, 0.24)',
+                    size: 40,
+                    line: { color: 'rgba(96, 165, 250, 0.78)', width: 2.2 },
+                },
+                hoverinfo: 'skip',
+                showlegend: false,
+            },
+            {
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Asunto analizado',
+                x: [semanticMap.analysis_point.x],
+                y: [semanticMap.analysis_point.y],
+                marker: {
+                    color: '#2563eb',
+                    size: 24,
+                    line: { color: '#dbeafe', width: 3.4 },
+                },
+                hovertemplate: `<b>Asunto analizado</b><br>${escapeHtml(semanticMap.analysis_point.subject_preview || semanticMap.analysis_point.subject || '')}<extra></extra>`,
+            },
+            {
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Al centroide phishing',
+                x: [semanticMap.analysis_point.x, semanticMap.centroids.phishing.x],
+                y: [semanticMap.analysis_point.y, semanticMap.centroids.phishing.y],
+                line: { color: 'rgba(255, 120, 120, 0.9)', width: 2.5, dash: 'dash' },
+                hoverinfo: 'skip',
+                showlegend: false,
+            },
+            {
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Al centroide legítimo',
+                x: [semanticMap.analysis_point.x, semanticMap.centroids.legitimate.x],
+                y: [semanticMap.analysis_point.y, semanticMap.centroids.legitimate.y],
+                line: { color: 'rgba(110, 231, 183, 0.9)', width: 2.5, dash: 'dash' },
+                hoverinfo: 'skip',
+                showlegend: false,
+            },
+        ];
+
+        const layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(4, 9, 18, 0.82)',
+            font: { color: '#e2e8f0', family: 'Inter, sans-serif' },
+            margin: { l: 48, r: 18, t: 20, b: 44 },
+            hovermode: 'closest',
+            legend: { orientation: 'h', y: 1.08, x: 0, bgcolor: 'rgba(0,0,0,0)' },
+            xaxis: { title: 'Componente principal 1', gridcolor: 'rgba(148,163,184,0.1)', zerolinecolor: 'rgba(148,163,184,0.16)' },
+            yaxis: { title: 'Componente principal 2', gridcolor: 'rgba(148,163,184,0.1)', zerolinecolor: 'rgba(148,163,184,0.16)' },
+        };
+
+        Plotly.newPlot(historySemanticView.plot, traces, layout, {
+            responsive: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+        });
+
+        historySemanticView.neighborSummary.textContent = `Entre los ${historySemanticState.neighborCount} vecinos más cercanos, ${neighbors.filter(point => point.label === 'phishing').length} son phishing y ${neighbors.filter(point => point.label === 'legitimate').length} son legítimos.`;
+        const nearestPhishing = getPointByIndex(points, semanticMap.nearest_by_class?.phishing?.index);
+        const nearestLegitimate = getPointByIndex(points, semanticMap.nearest_by_class?.legitimate?.index);
+        historySemanticView.nearestPhishingMetric.textContent = nearestPhishing
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.phishing.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.phishing.similarity)}`
+            : 'Sin datos.';
+        historySemanticView.nearestLegitimateMetric.textContent = nearestLegitimate
+            ? `Distancia ${formatMetric(semanticMap.nearest_by_class.legitimate.distance)} | similitud ${formatMetric(semanticMap.nearest_by_class.legitimate.similarity)}`
+            : 'Sin datos.';
+        historySemanticView.centroidMetrics.innerHTML = `Phishing: ${formatMetric(semanticMap.centroid_distances?.phishing)}<br>Legítimo: ${formatMetric(semanticMap.centroid_distances?.legitimate)}`;
+        updateHoverCard(null, historySemanticView.hoverDetails);
+        setSemanticDebug(`Historial: scatter renderizado con ${traces.length} capas visuales.`, historySemanticView.debug);
+
+        if (typeof historySemanticView.plot.removeAllListeners === 'function') {
+            historySemanticView.plot.removeAllListeners('plotly_hover');
+            historySemanticView.plot.removeAllListeners('plotly_unhover');
+        }
+        historySemanticView.plot.on('plotly_hover', (event) => {
+            const point = event?.points?.[0]?.customdata;
+            if (point && (point.subject_preview || point.subject)) {
+                updateHoverCard(point, historySemanticView.hoverDetails);
+            }
+        });
+        historySemanticView.plot.on('plotly_unhover', () => updateHoverCard(null, historySemanticView.hoverDetails));
+    }
+
+    function renderResultView(target, data, options = {}) {
+        const {
+            playAudio = false,
+            updateBackground = false,
+            showActions = false,
+            showResults = false,
+        } = options;
+
+        target.xaiPanel.className = 'xai-panel glass-panel';
+
+        if (data.status === 'phishing') {
+            if (playAudio) audio.playAlarm();
+            target.xaiPanel.classList.add('danger-theme');
+            target.threatIcon.textContent = '⚠️';
+            target.threatTitle.textContent = 'Alto Riesgo: Phishing Detectado';
+            if (updateBackground) {
+                document.querySelector('.glow-orb.orb-1').style.background = 'rgba(239, 68, 68, 0.2)';
+            }
+        } else {
+            if (playAudio) audio.playSafe();
+            target.xaiPanel.classList.add('safe-theme');
+            target.threatIcon.textContent = '🛡️';
+            target.threatTitle.textContent = 'Tráfico Seguro: Correo Legítimo';
+            if (updateBackground) {
+                document.querySelector('.glow-orb.orb-1').style.background = 'rgba(16, 185, 129, 0.2)';
+            }
+        }
+
+        target.threatConfidence.textContent = `Certeza: ${Number(data.confidence).toFixed(1)}%`;
+        target.naturalExplanation.textContent = data.explanation || 'Sin diagnóstico disponible.';
+        applySemanticReasoning(target, data.semantic_map);
+        target.emailSubjectPrev.textContent = data.subject || 'Sin asunto';
+        target.emailBodySim.textContent = data.fake_body || 'No se generó reconstrucción de cuerpo.';
+
+        target.keywordChips.innerHTML = '';
+        if (data.keywords && data.keywords.length > 0) {
+            data.keywords.forEach(kw => {
+                const span = document.createElement('span');
+                const isPositive = kw.positive !== false;
+                span.className = 'chip' + (isPositive ? ' chip-danger' : ' chip-safe');
+                const deltaPp = kw.delta_pp !== undefined ? kw.delta_pp : null;
+                const deltaStr = deltaPp !== null ? `Δ${deltaPp >= 0 ? '+' : ''}${deltaPp.toFixed(1)}pp` : `${kw.impact}%`;
+                const direction = isPositive ? 'sube P(phishing)' : 'baja P(phishing)';
+                span.title = `${kw.word}: ${deltaStr} en probabilidad de phishing (${direction}) — ${kw.impact}% de la atribución relativa total`;
+                const wordSpan = document.createElement('span');
+                wordSpan.textContent = kw.word;
+                const impactBadge = document.createElement('span');
+                impactBadge.className = 'impact-badge';
+                if (deltaPp !== null && Math.abs(deltaPp) > 10) impactBadge.classList.add('high-impact');
+                impactBadge.textContent = deltaStr;
+                span.appendChild(wordSpan);
+                span.appendChild(impactBadge);
+                target.keywordChips.appendChild(span);
+            });
+        } else {
+            target.keywordChips.innerHTML = '<span class="chip">Sin desencadenantes de palabras (señal global del embedding)</span>';
+        }
+
+        if (showResults) resultsSection.classList.remove('hidden');
+        if (showActions) resultActions.classList.remove('hidden');
+    }
+
+    function displayResults(data) {
+        lastResult = data;
+        renderResultView(
+            {
+                xaiPanel,
+                threatIcon,
+                threatTitle,
+                threatConfidence,
+                naturalExplanation,
+                semanticReasoningText,
+                keywordChips,
+                emailSubjectPrev,
+                emailBodySim,
+            },
+            data,
+            { playAudio: true, updateBackground: true, showActions: true, showResults: true }
+        );
+        renderSemanticMap(data.semantic_map, data.semantic_error);
+        renderCounterfactual(data);
+        renderLangWarning(data);
+
+        // Reset feedback state for this result
+        currentFeedbackIndex = data.history_index ?? null;
+        if (feedbackCorrectBtn) feedbackCorrectBtn.disabled = false;
+        if (feedbackWrongBtn)   feedbackWrongBtn.disabled   = false;
+        if (feedbackStatus)     feedbackStatus.textContent  = '';
+
+        // Load similar cases and refresh stats
+        renderSimilarCases(data.subject);
+        loadStats();
+
+        if (data.analysis_id) {
+            getPlotImageDataUrl(semanticPlot)
+                .then((scatterPngBase64) => scatterPngBase64
+                    ? persistFrontendAssets(data.analysis_id, { scatterPngBase64 })
+                    : null)
+                .catch((error) => console.warn('No se pudo persistir el scatter del análisis actual:', error));
+        }
+    }
+
+    function applyNeighborCountFromUi() {
+        if (!neighborCountInput) return;
+        const nextCount = Number(neighborCountInput.value);
+        if (!Number.isFinite(nextCount)) return;
+        semanticState.neighborCount = nextCount;
+        if (neighborCountValue) {
+            neighborCountValue.textContent = String(nextCount);
+        }
+        setSemanticDebug(`Ajustando vecinos resaltados a ${semanticState.neighborCount}.`);
+        if (semanticState.data) {
+            renderSemanticMap(semanticState.data);
+        }
+    }
+
+    ['input', 'change', 'mouseup', 'touchend'].forEach((eventName) => {
+        neighborCountInput?.addEventListener(eventName, applyNeighborCountFromUi);
+    });
+    if (neighborCountInput) {
+        neighborCountInput.oninput = applyNeighborCountFromUi;
+        neighborCountInput.onchange = applyNeighborCountFromUi;
+    }
+
+    semanticModeBtn?.addEventListener('click', () => {
+        semanticState.neighborsOnly = !semanticState.neighborsOnly;
+        semanticModeBtn.textContent = semanticState.neighborsOnly ? 'Mostrar todos los puntos' : 'Mostrar solo vecinos';
+        setSemanticDebug(`Cambiando modo de visualización a ${semanticState.neighborsOnly ? 'solo vecinos' : 'todos los puntos'}.`);
+        if (semanticState.data) {
+            renderSemanticMap(semanticState.data);
+        }
+    });
+
+    async function fetchSemanticMapForResult(resultData) {
+        if (resultData?.semantic_map) {
+            return {
+                semantic_map: resultData.semantic_map,
+                semantic_error: resultData.semantic_error || null,
+            };
+        }
+
+        const response = await fetch('/api/semantic-map', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subject: resultData?.subject || '',
+                status: resultData?.status || null,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudo reconstruir el mapa semántico del historial.');
+        }
+
+        return response.json();
+    }
+
+    async function openHistoryModal(data) {
+        activeHistoryResult = data;
+        renderResultView(historyView, data);
+        historySemanticView.panel.classList.remove('hidden');
+        historySemanticView.interpretation.textContent = 'Reconstruyendo mapa semántico archivado...';
+        historySemanticView.note.textContent = 'El modal histórico está solicitando el scatter real del dataset para este asunto.';
+        historySemanticView.plot.innerHTML = '<div class="semantic-placeholder">Reconstruyendo scatter semántico archivado...</div>';
+        historySemanticView.neighborSummary.textContent = 'Reconstruyendo...';
+        historySemanticView.nearestPhishingMetric.textContent = 'Reconstruyendo...';
+        historySemanticView.nearestLegitimateMetric.textContent = 'Reconstruyendo...';
+        historySemanticView.centroidMetrics.textContent = 'Reconstruyendo...';
+        setSemanticDebug('Historial: solicitando mapa semántico al backend...', historySemanticView.debug);
+        historyModalOverlay.classList.remove('hidden');
+        historyModalOverlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+
+        try {
+            const semanticPayload = await fetchSemanticMapForResult(data);
+            activeHistoryResult = {
+                ...data,
+                semantic_map: semanticPayload.semantic_map,
+                semantic_error: semanticPayload.semantic_error,
+            };
+            applySemanticReasoning(historyView, activeHistoryResult.semantic_map);
+            renderHistorySemanticMap(activeHistoryResult.semantic_map, activeHistoryResult.semantic_error);
+        } catch (error) {
+            setSemanticDebug(`Historial: ${error.message}`, historySemanticView.debug);
+            renderHistorySemanticMap(null, error.message);
+        }
+    }
+
+    function closeHistoryModal() {
+        activeHistoryResult = null;
+        historyModalOverlay.classList.add('hidden');
+        historyModalOverlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    async function loadSvgAsPngDataUrl(svgPath, targetWidth = 256, targetHeight = 256) {
+        const response = await fetch(svgPath);
+        if (!response.ok) {
+            throw new Error(`No se pudo cargar el logo SVG: ${svgPath}`);
+        }
+
+        const svgText = await response.text();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+        const objectUrl = URL.createObjectURL(svgBlob);
+
+        try {
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error('No se pudo rasterizar el logo SVG.'));
+                image.src = objectUrl;
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, targetWidth, targetHeight);
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            return canvas.toDataURL('image/png');
+        } finally {
+            URL.revokeObjectURL(objectUrl);
+        }
+    }
+
+    async function getPlotImageDataUrl(plotElement) {
+        if (!plotElement || !window.Plotly || typeof window.Plotly.toImage !== 'function') {
+            return null;
+        }
+
+        try {
+            const exportHost = document.createElement('div');
+            exportHost.style.position = 'fixed';
+            exportHost.style.left = '-10000px';
+            exportHost.style.top = '0';
+            exportHost.style.width = '1400px';
+            exportHost.style.height = '920px';
+            exportHost.style.background = '#0f111a';
+            document.body.appendChild(exportHost);
+
+            try {
+                const sourceData = (plotElement.data || []).map(trace => ({ ...trace }));
+                const sourceLayout = { ...(plotElement.layout || {}) };
+                const exportData = sourceData.map(trace => ({ ...trace }));
+
+                const exportLayout = {
+                    ...sourceLayout,
+                    paper_bgcolor: '#0f111a',
+                    plot_bgcolor: '#141827',
+                    font: { color: '#e2e8f0', family: 'Inter, sans-serif', size: 15 },
+                    legend: {
+                        ...(sourceLayout.legend || {}),
+                        bgcolor: 'rgba(20,24,39,0.96)',
+                        bordercolor: '#1f293d',
+                        borderwidth: 1,
+                        font: { color: '#e2e8f0', size: 13 },
+                    },
+                    margin: { l: 90, r: 30, t: 30, b: 80 },
+                    xaxis: {
+                        ...(sourceLayout.xaxis || {}),
+                        title: { text: 'Componente principal 1', font: { color: '#94a3b8', size: 15 } },
+                        gridcolor: '#1f293d',
+                        zerolinecolor: '#374151',
+                        tickfont: { color: '#94a3b8', size: 12 },
+                    },
+                    yaxis: {
+                        ...(sourceLayout.yaxis || {}),
+                        title: { text: 'Componente principal 2', font: { color: '#94a3b8', size: 15 } },
+                        gridcolor: '#1f293d',
+                        zerolinecolor: '#374151',
+                        tickfont: { color: '#94a3b8', size: 12 },
+                    },
+                };
+
+                await window.Plotly.newPlot(exportHost, exportData, exportLayout, {
+                    responsive: false,
+                    displaylogo: false,
+                    staticPlot: true,
+                });
+                await new Promise(resolve => window.requestAnimationFrame(() => resolve()));
+
+                return await window.Plotly.toImage(exportHost, {
+                    format: 'png',
+                    width: 1800,
+                    height: 1100,
+                    scale: 2,
+                });
+            } finally {
+                if (typeof window.Plotly.purge === 'function') {
+                    window.Plotly.purge(exportHost);
+                }
+                exportHost.remove();
+            }
+        } catch (error) {
+            console.warn('No se pudo rasterizar el scatter semántico para el PDF:', error);
+            return null;
+        }
+    }
+
+    async function persistFrontendAssets(analysisId, assets = {}) {
+        if (!analysisId) return;
+        const response = await fetch('/api/frontend-analysis-assets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                analysis_id: analysisId,
+                scatter_png_base64: assets.scatterPngBase64 || null,
+                pdf_base64: assets.pdfBase64 || null,
+            }),
+        });
+        if (!response.ok) {
+            throw new Error('No se pudieron persistir los artefactos del análisis frontend.');
+        }
+        return response.json();
+    }
+
+    async function exportResultToPdf(resultData, options = {}) {
+        if (!resultData) return;
+
+        const plotElement = options.plotElement || null;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const margin = 16;
+        const contentW = pageW - (margin * 2);
+        let y = 24;
+
+        const isPhishing = resultData.status === 'phishing';
+        const verdictLabel = isPhishing ? 'Phishing detectado' : 'Correo legitimo';
+        const reportDate = new Date().toLocaleString('es-MX');
+        const techList = runtimeTechnologies.length > 0
+            ? runtimeTechnologies
+            : ['Leave-One-Out XAI', 'FastAPI'];
+
+        const C = {
+            bg: [15, 17, 26],
+            panel: [20, 24, 39],
+            panelSoft: [31, 41, 61],
+            accent: [59, 130, 246],
+            accentSoft: [96, 165, 250],
+            dim: [148, 163, 184],
+            text: [226, 232, 240],
+            danger: [239, 68, 68],
+            safe: [16, 185, 129],
+            white: [248, 250, 252],
+        };
+
+        function paintPageBackground() {
+            doc.setFillColor(...C.bg);
+            doc.rect(0, 0, pageW, pageH, 'F');
+        }
+
+        function roundedPanel(x, yPos, w, h, fill = C.panel, border = C.panelSoft, radius = 6) {
+            doc.setFillColor(...fill);
+            doc.setDrawColor(...border);
+            doc.setLineWidth(0.25);
+            doc.roundedRect(x, yPos, w, h, radius, radius, 'FD');
+        }
+
+        function guardModern(needed = 8) {
+            if (y + needed > pageH - 20) {
+                doc.addPage();
+                paintPageBackground();
+                y = 22;
+            }
+        }
+
+        function sectionModern(title, eyebrow = '') {
+            guardModern(18);
+            if (eyebrow) {
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...C.dim);
+                doc.text(eyebrow.toUpperCase(), margin, y);
+                y += 5;
+            }
+            doc.setFontSize(10.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C.accent);
+            doc.text(title, margin, y);
+            y += 3;
+            doc.setDrawColor(...C.accentSoft);
+            doc.setLineWidth(0.35);
+            doc.line(margin, y, pageW - margin, y);
+            y += 5;
+        }
+
+        function bodyModern(text, size = 10, bold = false, rgb = C.text, width = contentW, x = margin) {
+            doc.setFontSize(size);
+            doc.setFont('helvetica', bold ? 'bold' : 'normal');
+            doc.setTextColor(...rgb);
+            const lines = doc.splitTextToSize(String(text), width);
+            const lineH = size * 0.56;
+            lines.forEach((line, i) => {
+                guardModern(lineH + 2);
+                const isLast = i === lines.length - 1;
+                if (isLast || bold) {
+                    doc.text(line, x, y);
+                } else {
+                    doc.text(line, x, y, { align: 'justify', maxWidth: width });
+                }
+                y += lineH;
+            });
+            y += 2.5;
+        }
+
+        function pillRow(items, startY) {
+            let x = margin;
+            let currentY = startY;
+            items.forEach((item) => {
+                const label = String(item);
+                doc.setFontSize(7.6);
+                doc.setFont('helvetica', 'bold');
+                const textW = doc.getTextWidth(label);
+                const pillW = textW + 8;
+                if (x + pillW > pageW - margin) {
+                    x = margin;
+                    currentY += 8;
+                }
+                roundedPanel(x, currentY - 4.6, pillW, 6.4, C.panelSoft, C.accentSoft, 3);
+                doc.setTextColor(...C.white);
+                doc.text(label, x + 4, currentY);
+                x += pillW + 3;
+            });
+            return currentY + 8;
+        }
+
+        function drawFooterModern() {
+            const total = doc.internal.getNumberOfPages();
+            for (let p = 1; p <= total; p++) {
+                doc.setPage(p);
+                doc.setDrawColor(...C.accentSoft);
+                doc.setLineWidth(0.25);
+                doc.line(margin, pageH - 12, pageW - margin, pageH - 12);
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...C.dim);
+                doc.text('Phishing XAI Shield', margin, pageH - 7);
+                doc.text(`Pag. ${p} / ${total}`, pageW - margin - 14, pageH - 7);
+            }
+        }
+
+        let logoDataUrl = null;
+        try {
+            logoDataUrl = await loadSvgAsPngDataUrl('logo-corporate.svg', 320, 320);
+        } catch (error) {
+            console.warn('Fallo al cargar el logo corporativo para el PDF:', error);
+        }
+        const semanticNarrative = buildSemanticNarrative(resultData.semantic_map);
+        const semanticPlotDataUrl = await getPlotImageDataUrl(plotElement);
+
+        paintPageBackground();
+
+        roundedPanel(margin, 12, contentW, 34);
+        roundedPanel(margin + 4, 16, 18, 26, C.panelSoft, C.accentSoft, 5);
+        if (logoDataUrl) {
+            doc.addImage(logoDataUrl, 'PNG', margin + 5.5, 17.5, 15, 15);
+        } else {
+            doc.setFillColor(...C.accent);
+            doc.roundedRect(margin + 8.5, 20.5, 9, 17, 3, 3, 'F');
+        }
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...C.white);
+        doc.text('Phishing XAI Shield', margin + 28, 24);
+        doc.setFontSize(8.6);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...C.dim);
+        doc.text('Forensic Threat Intelligence Report', margin + 28, 31);
+        doc.text(reportDate, margin + 28, 37);
+        y = 54;
+
+        const cardGap = 4;
+        const cardW = (contentW - (cardGap * 2)) / 3;
+        const verdictTone = isPhishing ? C.danger : C.safe;
+        [
+            { title: 'Veredicto', value: verdictLabel, tone: verdictTone },
+            { title: 'Certeza', value: `${Number(resultData.confidence).toFixed(1)}%`, tone: verdictTone },
+            { title: 'Pipeline', value: techList[0] || 'XAI', tone: C.accentSoft },
+        ].forEach((card, idx) => {
+            const x = margin + (idx * (cardW + cardGap));
+            roundedPanel(x, y, cardW, 22);
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C.dim);
+            doc.text(card.title.toUpperCase(), x + 4, y + 6);
+            doc.setFontSize(10.2);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...card.tone);
+            const lines = doc.splitTextToSize(card.value, cardW - 8);
+            doc.text(lines[0], x + 4, y + 14);
+        });
+        y += 30;
+
+        sectionModern('Tecnologias usadas', 'Platform');
+        y = pillRow(techList, y);
+
+        sectionModern('Sujeto analizado', 'Input');
+        bodyModern(resultData.subject, 11.4, true, C.white);
+
+        if (resultData.keywords && resultData.keywords.length > 0) {
+            sectionModern('Atribucion por palabra', 'Explainability');
+            const barMaxW = contentW * 0.33;
+            const colWord = margin;
+            const colImpact = margin + 72;
+            const colBar = margin + 95;
+            resultData.keywords.forEach((kw) => {
+                guardModern(9);
+                const isPositive = kw.positive !== false;
+                const barRgb = isPositive ? C.danger : C.safe;
+                const direction = isPositive ? 'empuja a phishing' : 'empuja a legitimo';
+                const deltaPp = kw.delta_pp !== undefined ? kw.delta_pp : null;
+                const deltaLabel = deltaPp !== null ? `${deltaPp >= 0 ? '+' : ''}${deltaPp.toFixed(1)}pp` : `${kw.impact}%`;
+                const barW = Math.max(2, (Math.min(Math.abs(deltaPp || kw.impact), 30) / 30) * barMaxW);
+
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...C.text);
+                const wordLines = doc.splitTextToSize(`"${kw.word}"`, 64);
+                doc.text(wordLines[0], colWord, y);
+
+                doc.setTextColor(...barRgb);
+                doc.text(deltaLabel, colImpact, y);
+
+                doc.setFillColor(...C.panelSoft);
+                doc.roundedRect(colBar, y - 3.8, barMaxW, 4.4, 2, 2, 'F');
+                doc.setFillColor(...barRgb);
+                doc.roundedRect(colBar, y - 3.8, barW, 4.4, 2, 2, 'F');
+
+                doc.setFontSize(7.1);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...C.dim);
+                doc.text(direction, colBar + barMaxW + 4, y);
+                y += 8;
+            });
+            y += 1.5;
+        }
+
+        if (resultData.explanation) {
+            sectionModern('Razonamiento maestro', 'AI Narrative');
+            bodyModern(resultData.explanation, 10.2, false, C.text);
+        }
+
+        if (semanticNarrative || resultData.semantic_map) {
+            sectionModern('Lectura del mapa semántico', 'Semantic Map');
+            if (semanticNarrative) {
+                bodyModern(semanticNarrative, 10.2, false, C.text);
+            }
+            if (resultData.semantic_map) {
+                const nearestPhishingDistance = formatMetric(resultData.semantic_map?.nearest_by_class?.phishing?.distance);
+                const nearestLegitimateDistance = formatMetric(resultData.semantic_map?.nearest_by_class?.legitimate?.distance);
+                const centroidPhishingDistance = formatMetric(resultData.semantic_map?.centroid_distances?.phishing);
+                const centroidLegitimateDistance = formatMetric(resultData.semantic_map?.centroid_distances?.legitimate);
+                bodyModern(
+                    `Punto phishing más cercano: ${nearestPhishingDistance} | Punto legítimo más cercano: ${nearestLegitimateDistance} | Centroide phishing: ${centroidPhishingDistance} | Centroide legítimo: ${centroidLegitimateDistance}`,
+                    9.2,
+                    false,
+                    C.dim
+                );
+            }
+            if (semanticPlotDataUrl) {
+                const imageProps = doc.getImageProperties(semanticPlotDataUrl);
+                const maxImageWidth = contentW - 8;
+                const maxImageHeight = 110;
+                const imageAspect = imageProps.width / imageProps.height;
+
+                let renderWidth = maxImageWidth;
+                let renderHeight = renderWidth / imageAspect;
+                if (renderHeight > maxImageHeight) {
+                    renderHeight = maxImageHeight;
+                    renderWidth = renderHeight * imageAspect;
+                }
+
+                const panelHeight = renderHeight + 8;
+                guardModern(panelHeight + 8);
+                roundedPanel(margin, y, contentW, panelHeight, C.panel, C.panelSoft, 6);
+                const imageX = margin + ((contentW - renderWidth) / 2);
+                doc.addImage(semanticPlotDataUrl, 'PNG', imageX, y + 4, renderWidth, renderHeight);
+                y += panelHeight + 6;
+            }
+        }
+
+        const hasBody = resultData.fake_body &&
+                        resultData.fake_body !== 'No se genero reconstruccion de cuerpo.' &&
+                        resultData.fake_body !== 'No se gener? reconstrucci?n de cuerpo.';
+        if (hasBody) {
+            sectionModern(
+                isPhishing ? 'Reconstruccion del vector de ataque' : 'Cuerpo de mensaje reconstruido',
+                'Message Body'
+            );
+            bodyModern(resultData.fake_body, 10, false, C.text);
+        }
+
+        drawFooterModern();
+        if (resultData.analysis_id) {
+            try {
+                await persistFrontendAssets(resultData.analysis_id, {
+                    pdfBase64: doc.output('datauristring'),
+                });
+            } catch (error) {
+                console.warn('No se pudo persistir el PDF del análisis frontend:', error);
+            }
+        }
+        doc.save(`Reporte_Forense_XAI_${Date.now()}.pdf`);
+    }
+
+    // --- Export Logic ---
+    exportPdfBtn.addEventListener('click', async () => {
+        await exportResultToPdf(lastResult, { plotElement: semanticPlot });
+    });
+
+    exportHistoryPdfBtn.addEventListener('click', async () => {
+        await exportResultToPdf(activeHistoryResult, { plotElement: historySemanticView.plot });
+    });
+
+    // --- History Logic ---
+    openHistoryBtn.addEventListener('click', () => {
+        historySidebar.classList.add('open');
+        loadHistory();
+    });
+
+    closeHistoryBtn.addEventListener('click', () => {
+        historySidebar.classList.remove('open');
+    });
+
+    clearHistoryBtn?.addEventListener('click', async () => {
+        clearHistoryBtn.disabled = true;
+        clearHistoryBtn.textContent = 'Borrando...';
+        try {
+            const resp = await fetch('/api/history', { method: 'DELETE' });
+            if (resp.ok) {
+                renderHistory([]);
+            }
+        } catch (err) {
+            console.error('Error borrando historial:', err);
+        } finally {
+            clearHistoryBtn.disabled = false;
+            clearHistoryBtn.textContent = 'Borrar todo';
+        }
+    });
+
+    closeHistoryModalBtn.addEventListener('click', () => {
+        closeHistoryModal();
+    });
+
+    historyModalOverlay.addEventListener('click', (event) => {
+        if (event.target === historyModalOverlay) {
+            closeHistoryModal();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !historyModalOverlay.classList.contains('hidden')) {
+            closeHistoryModal();
+        }
+    });
+
+    async function loadHistory() {
+        try {
+            const resp = await fetch('/api/history');
+            const data = await resp.json();
+            renderHistory(data);
+        } catch (err) { console.error("Error cargando historial:", err); }
+    }
+
+    function renderHistory(items) {
+        historyList.innerHTML = '';
+        if (items.length === 0) {
+            historyList.innerHTML = '<p class="empty-msg">No hay análisis previos.</p>';
+            return;
+        }
+        items.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = `history-card ${item.status}`;
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-status">${item.status}</span>
+                    <div class="card-header-right">
+                        <span class="card-time">${formatTime(item.timestamp)}</span>
+                        <button class="card-delete-btn" title="Borrar análisis" aria-label="Borrar análisis">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-subject">${item.subject}</div>
+            `;
+            card.querySelector('.card-delete-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                try {
+                    const resp = await fetch(`/api/history/${index}`, { method: 'DELETE' });
+                    if (resp.ok) {
+                        card.style.transition = 'opacity 0.25s, transform 0.25s';
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateX(30px)';
+                        setTimeout(() => loadHistory(), 280);
+                    }
+                } catch (err) {
+                    console.error('Error borrando entrada de historial:', err);
+                    btn.disabled = false;
+                }
+            });
+            card.addEventListener('click', () => {
+                openHistoryModal(item);
+                historySidebar.classList.remove('open');
+            });
+            historyList.appendChild(card);
+        });
+    }
+
+    function formatTime(isoStr) {
+        try {
+            const date = new Date(isoStr);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch { return isoStr; }
+    }
+
+    loadHistory();
+});
